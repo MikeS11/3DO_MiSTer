@@ -10,13 +10,13 @@ module HPS2PAD (
 	input              EXPBDIN,
 	output reg         EXPBDOUT,
 	
-	input      [15: 0] JOY
+	input      [31: 0] PAD_DATA
 );
 	
 	
 	bit [ 4: 0] STATE;
 	always @(posedge CLK or negedge RST_N) begin
-		bit [15: 0]  DIN,DOUT;
+		bit [31: 0]  DIN,DOUT;
 		bit [12: 0]  WAIT_CNT;
 		bit [ 3: 0]  BIT_CNT;
 		bit          PBCLK_OLD;
@@ -58,7 +58,7 @@ module HPS2PAD (
 					if (WAIT_CNT == 0) begin
 						WAIT_CNT <= '1;
 						if (!PBCLK) begin
-							DOUT <= JOY;
+							DOUT <= PAD_DATA;
 							BIT_CNT <= '0;
 							STATE <= 5'd4;
 						end
