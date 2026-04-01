@@ -11,8 +11,7 @@ module CLIO_VIDEO
 	
 	input              PAL,
 	
-	input              VCE_R,
-	input              VCE_F,
+	input              VCE,
 	input              HSYNC_N,
 	input              VSYNC_N,
 	
@@ -26,6 +25,8 @@ module CLIO_VIDEO
 	output             PCSC,
 	
 	output     [23: 0] AD,
+	output             DE,
+	
 	input      [ 7: 0] DBG_EXT
 `ifdef DEBUG
                       ,
@@ -43,7 +44,7 @@ module CLIO_VIDEO
 		if (!RST_N) begin
 			HSTART <= '0;
 		end
-		else if (EN && VCE_R) begin
+		else if (EN && VCE) begin
 			HSYNC_N_OLD <= HSYNC_N;
 			CHS = HSYNC_N & ~HSYNC_N_OLD;
 			
@@ -64,7 +65,7 @@ module CLIO_VIDEO
 			FIELD <= 0;
 			VSYNC_N_OLD <= 1;
 		end
-		else if (EN && VCE_R) begin
+		else if (EN && VCE) begin
 			HCOUNT <= HCOUNT + 11'd1;
 			if (HSTART[2]) begin
 				HCOUNT <= '0;
@@ -107,7 +108,7 @@ module CLIO_VIDEO
 			COPY_EN <= 0;
 			WRITE_EN <= 0;
 		end
-		else if (EN && VCE_R) begin
+		else if (EN && VCE) begin
 			if (HSTART[2]) begin
 //				WRITE_EN <= 0;
 			end else begin
@@ -150,7 +151,7 @@ module CLIO_VIDEO
 			RSCAP_N <= 0;
 			SCAP_SEL <= 0;
 		end
-		else if (EN && VCE_R) begin
+		else if (EN && VCE) begin
 			LSCAP_N <= LSC_N;
 			RSCAP_N <= RSC_N;
 			if (!LSCAP_N)
@@ -168,7 +169,7 @@ module CLIO_VIDEO
 			LSCAP_BUF <= '0;
 			RSCAP_BUF <= '0;
 		end
-		else if (EN && VCE_R) begin
+		else if (EN && VCE) begin
 			if (!LSCAP_N) begin
 				LSCAP_BUF <= S[31:16];
 			end
@@ -188,7 +189,7 @@ module CLIO_VIDEO
 			PIPEREAD <= '0;
 			READ <= 0;
 		end
-		else if (EN && VCE_R) begin
+		else if (EN && VCE) begin
 			CAPEND1_N <= CAPCLKEN_N;
 			CAPEND2_N <= CAPEND1_N;
 			CAPEND3_N <= CAPEND2_N;
@@ -206,7 +207,7 @@ module CLIO_VIDEO
 			AMYCTL <= '0;
 			DISPCTL <= '0;
 		end
-		else if (EN && VCE_R) begin
+		else if (EN && VCE) begin
 			if (LOAD && !CAPEND1_N) begin
 				if (!SCAP[30] && SCAP[31]) begin
 					AMYCTL <= SCAP[9:0];
@@ -244,7 +245,7 @@ module CLIO_VIDEO
 		if (!RST_N) begin
 			CURR_PREV <= 0;
 		end
-		else if (EN && VCE_R) begin
+		else if (EN && VCE) begin
 			if (HSTART[0]) begin
 				CURR_PREV <= 0;
 			end
@@ -272,7 +273,7 @@ module CLIO_VIDEO
 			DBG_HL_HPOS <= 5;
 			DBG_HL_VPOS <= 5;
 		end
-		else if (EN && VCE_R) begin
+		else if (EN && VCE) begin
 			if (HSTART[0]) begin
 				DBG_HCNT <= '0;
 			end
@@ -308,8 +309,7 @@ module CLIO_VIDEO
 		.RST_N(RST_N),
 		.EN(EN),
 		
-		.CE_R(VCE_R),
-		.CE_F(VCE_F),
+		.CE(VCE),
 		
 		.INPUT(INPUT ^ {1'b0,{15{DBG_HL_DOT}}}),
 		
@@ -332,7 +332,7 @@ module CLIO_VIDEO
 			BYPASS_OUTPUT <= '0;
 			BYPASS_EN <= 0;
 		end
-		else if (EN && VCE_R) begin
+		else if (EN && VCE) begin
 			if (!CAPEND2_N) begin
 				BYPASS_EN <= (DISPCTL.BYPASS && INPUT[15]) /*|| DISPCTL[12]*/;
 				BYPASS_OUTPUT <= {INPUT[14:10],INPUT[12:10],INPUT[9:5],INPUT[7:5],INPUT[4:0],INPUT[2:0]};
@@ -346,7 +346,7 @@ module CLIO_VIDEO
 		if (!RST_N) begin
 			RGB <= '0;
 		end
-		else if (EN && VCE_R) begin
+		else if (EN && VCE) begin
 			if (!CAPEND4_N)
 				RGB <= BYPASS_EN ? BYPASS_OUTPUT : CLUT_OUTPUT;
 		end
@@ -357,7 +357,7 @@ module CLIO_VIDEO
 		if (!RST_N) begin
 			{CAPEND5_N,CAPEND6_N,CAPEND7_N} <= '0;
 		end
-		else if (EN && VCE_R) begin
+		else if (EN && VCE) begin
 			CAPEND5_N <= CAPEND4_N;
 			CAPEND6_N <= CAPEND5_N;
 			CAPEND7_N <= CAPEND6_N;
@@ -369,7 +369,7 @@ module CLIO_VIDEO
 		if (!RST_N) begin
 			CAPEN_DIV <= 0;
 		end
-		else if (EN && VCE_R) begin
+		else if (EN && VCE) begin
 			if (!READ_EN)
 				CAPEN_DIV <= 0;
 			else if (!CAPEND5_N)
@@ -380,16 +380,17 @@ module CLIO_VIDEO
 	wire PDS_CLK1 = ~CAPEND5_N & ~CAPEN_DIV;
 	wire PDS_CLK2 = ~CAPEND7_N &  CAPEN_DIV;
 	bit  [23: 0] LP0,LP1,LP2,LP3;
-	CLIO_24DESTACKER PDESTACKER(CLK, VCE_R, EN, READ_START, PDS_CLK1, PDS_CLK2, RGB, LP0, LP1, LP2, LP3);
+	CLIO_24DESTACKER PDESTACKER(CLK, VCE, EN, READ_START, PDS_CLK1, PDS_CLK2, RGB, LP0, LP1, LP2, LP3);
 	
 	bit  [23: 0] INTERPOL_OUT;
+	bit          INTERPOL_DE;
 	CLIO_INTERPOL INTERPOL
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),
 		.EN(EN),
 		
-		.CE_R(VCE_R),
+		.CE(VCE),
 		
 		.ACLK1(1'b0),
 		.ACLK2(1'b0),
@@ -398,11 +399,13 @@ module CLIO_VIDEO
 		.LP1(LP1),
 		.LP2(LP2),
 		.LP3(LP3),
+		.DE_IN(~CAPEND7_N),
 		
-		.OUT(INTERPOL_OUT)
+		.OUT(INTERPOL_OUT),
+		.DE(INTERPOL_DE)
 	);
 	assign AD = INTERPOL_OUT;
-	
+	assign DE = INTERPOL_DE;
 
 endmodule
 

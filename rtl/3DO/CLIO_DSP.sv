@@ -822,15 +822,15 @@ module CLIO_DSP
 		end
 	end 
 	
-	bit  [30: 0] MULT_RES;
+	bit  [31: 0] MULT_RES;
 	always_comb begin
 		bit  [15: 0] M2_TEMP;
 		
-		M2_TEMP = M2SEL[1] ? M2[1] : (ASEL[1] == 4'b0011 || ASEL[1] == 4'b0101 ? {STATUS[2]/*ALU_C*/,15'h0000} : ACC[19:4]);
-		MULT_RES = $signed(M1[1]) * $signed(M2_TEMP);
+		M2_TEMP = M2SEL[1] ? M2[1] : ACC[19:4];
+		MULT_RES = $signed(M1[1]) * $signed(M2_TEMP) * 2;
 	end 
 	
-	wire [19: 0] ALU_CARRY = {11'h000,STATUS[2]/*ALU_C*/,4'h0};
+	wire [19: 0] ALU_CARRY = {15'h0000,STATUS[2]/*ALU_C*/,4'h0};
 	always_comb begin
 		bit  [19: 0] ALU_A,ALU_B;
 		bit  [19: 0] ALU_ARITH_A,ALU_ARITH_B;
@@ -845,13 +845,13 @@ module CLIO_DSP
 			2'b00: ALU_A = ACC;
 			2'b01: ALU_A = {A1[1],4'b0000};
 			2'b10: ALU_A = {A2[1],4'b0000};
-			2'b11: ALU_A = MULT_RES[30:11];
+			2'b11: ALU_A = !M2SEL[1] && (ASEL[1] == 4'b0011 || ASEL[1] == 4'b0101) ? {M1[1]&{16{STATUS[2]}},4'b0000} : MULT_RES[31:12];
 		endcase
 		case (AMX[1][1:0])
 			2'b00: ALU_B = ACC;
 			2'b01: ALU_B = {A1[1],4'b0000};
 			2'b10: ALU_B = {A2[1],4'b0000};
-			2'b11: ALU_B = MULT_RES[30:11];
+			2'b11: ALU_B = MULT_RES[31:12];
 		endcase
 		
 		case (ASEL[1])

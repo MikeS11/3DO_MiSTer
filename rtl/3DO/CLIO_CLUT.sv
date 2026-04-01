@@ -4,8 +4,7 @@ module CLIO_CLUT
 	input              RST_N,
 	input              EN,
 	
-	input              CE_R,
-	input              CE_F,
+	input              CE,
 	
 	input      [15: 0] INPUT,
 	
@@ -28,7 +27,7 @@ module CLIO_CLUT
 			ADDR <= '0;
 			BG_SWITCH <= 0;
 		end
-		else if (EN && CE_R) begin
+		else if (EN && CE) begin
 			if (COPY_EN) begin
 				ADDR <= ADDR + 5'd1;
 				if (ADDR == 5'd31)
@@ -49,7 +48,7 @@ module CLIO_CLUT
 			GRADDR <= '0;
 			BRADDR <= '0;
 		end
-		else if (EN && CE_R) begin
+		else if (EN && CE) begin
 			if (READCLKEN) begin
 				RRADDR <= BG_DET ? {1'b1,1'b0,{4'b0000,CURR_PREV}} : {1'b0,CURR_PREV,INPUT[14:10]};
 				GRADDR <= BG_DET ? {1'b1,1'b0,{4'b0000,CURR_PREV}} : {1'b0,CURR_PREV,INPUT[9:5]};
@@ -78,7 +77,7 @@ module CLIO_CLUT
 		
 		.WADDR(COL_RGB_WADDR),
 		.DIN(COL_R_DATA),
-		.WE(COL_R_WE & CE_R),
+		.WE(COL_R_WE & CE),
 		
 		.RADDR(COL_R_RADDR),
 		.DOUT(COL_R_OUT)
@@ -95,7 +94,7 @@ module CLIO_CLUT
 		
 		.WADDR(COL_RGB_WADDR),
 		.DIN(COL_G_DATA),
-		.WE(COL_G_WE & CE_R),
+		.WE(COL_G_WE & CE),
 		
 		.RADDR(COL_G_RADDR),
 		.DOUT(COL_G_OUT)
@@ -112,7 +111,7 @@ module CLIO_CLUT
 		
 		.WADDR(COL_RGB_WADDR),
 		.DIN(COL_B_DATA),
-		.WE(COL_B_WE & CE_R),
+		.WE(COL_B_WE & CE),
 		
 		.RADDR(COL_B_RADDR),
 		.DOUT(COL_B_OUT)

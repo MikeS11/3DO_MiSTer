@@ -17,7 +17,8 @@ module CLIO
 	
 	input              CE_R,
 	input              CE_F,
-	input              CE,
+	input              IO_EN,
+	input              DSP_EN,
 	
 	input              PON,
 	output reg         RESET_N,
@@ -51,8 +52,7 @@ module CLIO
 	output reg [ 3: 0] ADBIO_O,
 	output reg [ 3: 0] ADBIO_D,
 	
-	input              VCE_R,
-	input              VCE_F,
+	input              VCE,
 	input              HSYNC_N,
 	input              VSYNC_N,
 	
@@ -62,18 +62,22 @@ module CLIO
 	output             PCSC,
 	
 	output     [23: 0] AD,
+	output             DE,
 	
 	input              ACLK_CE,
 	output     [15: 0] AUDIOL,
 	output     [15: 0] AUDIOR,
 	
-	input      [ 7: 0] DBG_EXT,
+	input      [ 7: 0] DBG_EXT
+`ifdef DEBUG
+	                  ,
 	output reg [ 7: 0] DBG_VINT1_CNT,
 	output reg [ 9: 0] DBG_WAIT_CNT,
 	output reg [10: 0] DBG_DMA_WAIT_CNT,
 	output             DBG_FIFO_CHANGE,
 	output reg [15: 0] DBG_TIMER0,DBG_TIMER1,
 	output reg         DBG_HOOK
+`endif
 );
 
 	parameter bit [31: 0] REV = 32'h02020000;
@@ -272,17 +276,41 @@ module CLIO
 			VINT0_ACK <= 0;
 			VINT1_ACK <= 0;
 		end
-		else begin
-			if (EN && CE_R) begin
-				if (CE) TM_CLK <= 0;
-				TM_CLKDIV <= TM_CLKDIV + 10'd1;
-				if (TM_CLKDIV == 10'd399) begin//TODO: use TimerSlack register
-					TM_CLKDIV <= '0;
-					TM_CLK <= 1;
-				end
+		else if (EN && CE_R) begin
+			if (IO_EN) TM_CLK <= 0;
+			TM_CLKDIV <= TM_CLKDIV + 10'd1;
+			if (TM_CLKDIV == 10'd399) begin//TODO: use TimerSlack register
+				TM_CLKDIV <= '0;
+				TM_CLK <= 1;
 			end
 			
-			if (EN && CE && CE_R) begin			
+			if (DSP_EN) begin	
+				if (EIFIFO_OE_LATCH[ 0] && EIFIFO_COUNT[ 0] < 4'd2 && !DMA_TO_DSP_PEND[ 0]) DMA_TO_DSP_PEND[ 0] <= 1;
+				if (EIFIFO_OE_LATCH[ 1] && EIFIFO_COUNT[ 1] < 4'd2 && !DMA_TO_DSP_PEND[ 1]) DMA_TO_DSP_PEND[ 1] <= 1;
+				if (EIFIFO_OE_LATCH[ 2] && EIFIFO_COUNT[ 2] < 4'd2 && !DMA_TO_DSP_PEND[ 2]) DMA_TO_DSP_PEND[ 2] <= 1;
+				if (EIFIFO_OE_LATCH[ 3] && EIFIFO_COUNT[ 3] < 4'd2 && !DMA_TO_DSP_PEND[ 3]) DMA_TO_DSP_PEND[ 3] <= 1;
+				if (EIFIFO_OE_LATCH[ 4] && EIFIFO_COUNT[ 4] < 4'd2 && !DMA_TO_DSP_PEND[ 4]) DMA_TO_DSP_PEND[ 4] <= 1;
+				if (EIFIFO_OE_LATCH[ 5] && EIFIFO_COUNT[ 5] < 4'd2 && !DMA_TO_DSP_PEND[ 5]) DMA_TO_DSP_PEND[ 5] <= 1;
+				if (EIFIFO_OE_LATCH[ 6] && EIFIFO_COUNT[ 6] < 4'd2 && !DMA_TO_DSP_PEND[ 6]) DMA_TO_DSP_PEND[ 6] <= 1;
+				if (EIFIFO_OE_LATCH[ 7] && EIFIFO_COUNT[ 7] < 4'd2 && !DMA_TO_DSP_PEND[ 7]) DMA_TO_DSP_PEND[ 7] <= 1;
+				if (EIFIFO_OE_LATCH[ 8] && EIFIFO_COUNT[ 8] < 4'd2 && !DMA_TO_DSP_PEND[ 8]) DMA_TO_DSP_PEND[ 8] <= 1;
+				if (EIFIFO_OE_LATCH[ 9] && EIFIFO_COUNT[ 9] < 4'd2 && !DMA_TO_DSP_PEND[ 9]) DMA_TO_DSP_PEND[ 9] <= 1;
+				if (EIFIFO_OE_LATCH[10] && EIFIFO_COUNT[10] < 4'd2 && !DMA_TO_DSP_PEND[10]) DMA_TO_DSP_PEND[10] <= 1;
+				if (EIFIFO_OE_LATCH[11] && EIFIFO_COUNT[11] < 4'd2 && !DMA_TO_DSP_PEND[11]) DMA_TO_DSP_PEND[11] <= 1;
+				if (EIFIFO_OE_LATCH[12] && EIFIFO_COUNT[12] < 4'd2 && !DMA_TO_DSP_PEND[12]) DMA_TO_DSP_PEND[12] <= 1;
+				
+				if (/*EOFIFO_WE_LATCH[0] &&*/ EOFIFO_COUNT[0] >= 4'd6 && !DMA_FROM_DSP_PEND[0]) DMA_FROM_DSP_PEND[0] <= 1;
+				if (/*EOFIFO_WE_LATCH[1] &&*/ EOFIFO_COUNT[1] >= 4'd6 && !DMA_FROM_DSP_PEND[1]) DMA_FROM_DSP_PEND[1] <= 1;
+				if (/*EOFIFO_WE_LATCH[2] &&*/ EOFIFO_COUNT[2] >= 4'd6 && !DMA_FROM_DSP_PEND[2]) DMA_FROM_DSP_PEND[2] <= 1;
+				if (/*EOFIFO_WE_LATCH[3] &&*/ EOFIFO_COUNT[3] >= 4'd6 && !DMA_FROM_DSP_PEND[3]) DMA_FROM_DSP_PEND[3] <= 1;
+				
+				if (EOFIFO_FLUSH[0] && EOFIFO_COUNT[0] && !DMA_FROM_DSP_PEND[0]) DMA_FROM_DSP_PEND[0] <= 1;
+				if (EOFIFO_FLUSH[1] && EOFIFO_COUNT[1] && !DMA_FROM_DSP_PEND[1]) DMA_FROM_DSP_PEND[1] <= 1;
+				if (EOFIFO_FLUSH[2] && EOFIFO_COUNT[2] && !DMA_FROM_DSP_PEND[2]) DMA_FROM_DSP_PEND[2] <= 1;
+				if (EOFIFO_FLUSH[3] && EOFIFO_COUNT[3] && !DMA_FROM_DSP_PEND[3]) DMA_FROM_DSP_PEND[3] <= 1;
+			end
+			
+			if (IO_EN) begin			
 				INFO_CODE <= 0;
 				if (CLC == 3'h7) begin
 					INFO_CODE <= 1;
@@ -326,8 +354,10 @@ module CLIO
 								endcase
 								IO_ST <= IO_IDLE;
 								
+`ifdef DEBUG
 								if ({A[5:2],2'b00} == 6'h0C && CPU_DI[10:0] == 11'h7FF) DBG_VINT1_CNT <= DBG_VINT1_CNT + 1'd1;
 								if ({A[5:2],2'b00} == 6'h28 && CPU_DI[5]) DBG_VINT1_CNT <= '0;
+`endif
 							end
 							else if (INTERRUPT_SEL) begin
 								case ({A[7:2],2'b00})
@@ -426,18 +456,24 @@ module CLIO
 								IO_ST <= IO_DSP_READ;
 							end
 				
+`ifdef DEBUG
 							if (TIMER_SEL && A[6:2] == 5'b00000) begin
 								DBG_TIMER0 <= TM_CNT[0];
 							end
 							if (TIMER_SEL && A[6:2] == 5'b00010) begin
 								DBG_TIMER1 <= TM_CNT[1];
 							end
+`endif
 						end
+`ifdef DEBUG
 						DBG_WAIT_CNT <= '0;
+`endif
 					end
 					
 					IO_WAIT: begin
+`ifdef DEBUG
 						DBG_WAIT_CNT <= DBG_WAIT_CNT + 1'd1;
+`endif
 						
 						IO_XBUS_WR <= 0;
 						IO_XBUS_RD <= 0;
@@ -445,7 +481,9 @@ module CLIO
 							IO_READY <= 1;
 							IO_ST <= IO_IDLE;
 							
+`ifdef DEBUG
 							DBG_WAIT_CNT <= '0;
+`endif
 						end
 					end
 					
@@ -527,9 +565,9 @@ module CLIO
 					INT0_PEND[11] <= 1;
 				end
 				
-				if (DMA_INT_REQ && DMA_CHAN == 5'h0F) begin
-					INT0_PEND[11] <= 1;
-				end
+//				if (DMA_INT_REQ && DMA_CHAN == 5'h0F) begin
+//					INT0_PEND[11] <= 1;
+//				end
 				if (DMA_INT_REQ && DMA_CHAN == 5'h10) begin
 					INT0_PEND[12] <= 1;
 				end
@@ -605,30 +643,6 @@ module CLIO
 				if (DMAEN[10] && !DMAEN_OLD[10] && !EIFIFO_COUNT[10]) DMA_TO_DSP_PEND[10] <= 1;
 				if (DMAEN[11] && !DMAEN_OLD[11] && !EIFIFO_COUNT[11]) DMA_TO_DSP_PEND[11] <= 1;
 				if (DMAEN[12] && !DMAEN_OLD[12] && !EIFIFO_COUNT[12]) DMA_TO_DSP_PEND[12] <= 1;
-				
-				if (EIFIFO_OE_LATCH[ 0] && EIFIFO_COUNT[ 0] < 4'd2 && !DMA_TO_DSP_PEND[ 0]) DMA_TO_DSP_PEND[ 0] <= 1;
-				if (EIFIFO_OE_LATCH[ 1] && EIFIFO_COUNT[ 1] < 4'd2 && !DMA_TO_DSP_PEND[ 1]) DMA_TO_DSP_PEND[ 1] <= 1;
-				if (EIFIFO_OE_LATCH[ 2] && EIFIFO_COUNT[ 2] < 4'd2 && !DMA_TO_DSP_PEND[ 2]) DMA_TO_DSP_PEND[ 2] <= 1;
-				if (EIFIFO_OE_LATCH[ 3] && EIFIFO_COUNT[ 3] < 4'd2 && !DMA_TO_DSP_PEND[ 3]) DMA_TO_DSP_PEND[ 3] <= 1;
-				if (EIFIFO_OE_LATCH[ 4] && EIFIFO_COUNT[ 4] < 4'd2 && !DMA_TO_DSP_PEND[ 4]) DMA_TO_DSP_PEND[ 4] <= 1;
-				if (EIFIFO_OE_LATCH[ 5] && EIFIFO_COUNT[ 5] < 4'd2 && !DMA_TO_DSP_PEND[ 5]) DMA_TO_DSP_PEND[ 5] <= 1;
-				if (EIFIFO_OE_LATCH[ 6] && EIFIFO_COUNT[ 6] < 4'd2 && !DMA_TO_DSP_PEND[ 6]) DMA_TO_DSP_PEND[ 6] <= 1;
-				if (EIFIFO_OE_LATCH[ 7] && EIFIFO_COUNT[ 7] < 4'd2 && !DMA_TO_DSP_PEND[ 7]) DMA_TO_DSP_PEND[ 7] <= 1;
-				if (EIFIFO_OE_LATCH[ 8] && EIFIFO_COUNT[ 8] < 4'd2 && !DMA_TO_DSP_PEND[ 8]) DMA_TO_DSP_PEND[ 8] <= 1;
-				if (EIFIFO_OE_LATCH[ 9] && EIFIFO_COUNT[ 9] < 4'd2 && !DMA_TO_DSP_PEND[ 9]) DMA_TO_DSP_PEND[ 9] <= 1;
-				if (EIFIFO_OE_LATCH[10] && EIFIFO_COUNT[10] < 4'd2 && !DMA_TO_DSP_PEND[10]) DMA_TO_DSP_PEND[10] <= 1;
-				if (EIFIFO_OE_LATCH[11] && EIFIFO_COUNT[11] < 4'd2 && !DMA_TO_DSP_PEND[11]) DMA_TO_DSP_PEND[11] <= 1;
-				if (EIFIFO_OE_LATCH[12] && EIFIFO_COUNT[12] < 4'd2 && !DMA_TO_DSP_PEND[12]) DMA_TO_DSP_PEND[12] <= 1;
-				
-				if (/*EOFIFO_WE_LATCH[0] &&*/ EOFIFO_COUNT[0] >= 4'd6 && !DMA_FROM_DSP_PEND[0]) DMA_FROM_DSP_PEND[0] <= 1;
-				if (/*EOFIFO_WE_LATCH[1] &&*/ EOFIFO_COUNT[1] >= 4'd6 && !DMA_FROM_DSP_PEND[1]) DMA_FROM_DSP_PEND[1] <= 1;
-				if (/*EOFIFO_WE_LATCH[2] &&*/ EOFIFO_COUNT[2] >= 4'd6 && !DMA_FROM_DSP_PEND[2]) DMA_FROM_DSP_PEND[2] <= 1;
-				if (/*EOFIFO_WE_LATCH[3] &&*/ EOFIFO_COUNT[3] >= 4'd6 && !DMA_FROM_DSP_PEND[3]) DMA_FROM_DSP_PEND[3] <= 1;
-				
-				if (EOFIFO_FLUSH[0] && EOFIFO_COUNT[0] && !DMA_FROM_DSP_PEND[0]) DMA_FROM_DSP_PEND[0] <= 1;
-				if (EOFIFO_FLUSH[1] && EOFIFO_COUNT[1] && !DMA_FROM_DSP_PEND[1]) DMA_FROM_DSP_PEND[1] <= 1;
-				if (EOFIFO_FLUSH[2] && EOFIFO_COUNT[2] && !DMA_FROM_DSP_PEND[2]) DMA_FROM_DSP_PEND[2] <= 1;
-				if (EOFIFO_FLUSH[3] && EOFIFO_COUNT[3] && !DMA_FROM_DSP_PEND[3]) DMA_FROM_DSP_PEND[3] <= 1;
 				
 				if (FIFOINIT[ 0]) DMA_TO_DSP_PEND[ 0] <= 0;
 				if (FIFOINIT[ 1]) DMA_TO_DSP_PEND[ 1] <= 0;
@@ -744,7 +758,6 @@ module CLIO
 							DMA_CHAN <= 5'h14;
 							DMA_ST <= DMA_REQUEST;
 						end
-	//					DBG_DMA_WAIT_CNT <= '0;
 					end
 					
 					DMA_REQUEST: begin
@@ -817,7 +830,9 @@ module CLIO
 				
 				endcase
 				
+`ifdef DEBUG
 				if (DMA_XBUS_ACT) DBG_DMA_WAIT_CNT <= DBG_DMA_WAIT_CNT + 1'd1;
+`endif
 				
 				if (DMA_FROM_DSP_READ[0]) begin
 					DMA_BUF2 <= EOFIFO_Q[DMA_CHAN[1:0]];
@@ -829,10 +844,11 @@ module CLIO
 					if (DMA_EXP_WORD_CNT == 2'd3 || !DMA_XBUS_ACT) begin
 						DMA_EXP_PEND_INC = 1;
 						DMA_EXP_WORD_CNT <= '0;
-						DBG_DMA_WAIT_CNT <= '0;
 					end
 					
+`ifdef DEBUG
 					DBG_DMA_WAIT_CNT <= '0;
+`endif
 				end
 				if ( DMA_EXP_PEND_INC && !DMA_EXP_PEND_DEC) DMA_EXP_PEND <= DMA_EXP_PEND + 2'd1;
 				if (!DMA_EXP_PEND_INC &&  DMA_EXP_PEND_DEC) DMA_EXP_PEND <= DMA_EXP_PEND - 2'd1;
@@ -946,8 +962,8 @@ module CLIO
 		.RST_N(RST_N),
 		.EN(EN),
 		
-		.CE_R(CE_R && CE),
-		.CE_F(CE_F && CE),
+		.CE_R(CE_R && IO_EN),
+		.CE_F(CE_F && IO_EN),
 		
 		.A(IO_A_LATCH[9:2]),
 		.DI(IO_DI_LATCH),
@@ -975,7 +991,7 @@ module CLIO
 	bit  [31: 0] XBUS_FIFO_Q;
 	bit          XBUS_FIFO_FULL;
 	bit          XBUS_FIFO_EMPTY;
-	CLIO_DMA_FIFO XBUS_FIFO (.CLK(CLK), .EN(EN), .RST(~RST_N), .DATA(XBUS_DMA_DO), .WRREQ(DMA_EXP_FIFO_WRITE & CE & CE_R), .RDREQ(DMA_EXP_FIFO_READ & CE & CE_R), .Q(XBUS_FIFO_Q), .FULL(XBUS_FIFO_FULL), .EMPTY(XBUS_FIFO_EMPTY));
+	CLIO_DMA_FIFO XBUS_FIFO (.CLK(CLK), .EN(EN), .RST(~RST_N), .DATA(XBUS_DMA_DO), .WRREQ(DMA_EXP_FIFO_WRITE & IO_EN & CE_R), .RDREQ(DMA_EXP_FIFO_READ & IO_EN & CE_R), .Q(XBUS_FIFO_Q), .FULL(XBUS_FIFO_FULL), .EMPTY(XBUS_FIFO_EMPTY));
 	
 	//DSP
 	bit          DSP_RESET;
@@ -991,10 +1007,10 @@ module CLIO
 	(
 		.CLK(CLK),
 		.RST_N(RST_N),
-		.EN(EN),
+		.EN(DSP_EN),
 		
-		.CE_R(CE_R && CE),
-		.CE_F(CE_F && CE),
+		.CE_R(CE_R),
+		.CE_F(CE_F),
 		
 		.GW(DSP_GW),
 		.RESET(DSP_RESET),
@@ -1023,7 +1039,7 @@ module CLIO
 		
 		.WA(DSP_ADDR),
 		.WD(DSP_DI),
-		.WE(DSP_NRAM_WE & CE & CE_R),
+		.WE(DSP_NRAM_WE & IO_EN & CE_R),
 		
 		.RA(DSP_PC[8:0]),
 		.RD(DSP_NBUS)
@@ -1040,7 +1056,7 @@ module CLIO
 		
 		.WA(DSP_ADDR[6:0]),
 		.WD(DSP_DI),
-		.WE(EIRAM_WE & CE & CE_R),
+		.WE(EIRAM_WE & IO_EN & CE_R),
 		
 		.RA(DSP_EI_ADDR[6:0]),
 		.RD(EIRAM_DATA)
@@ -1056,7 +1072,7 @@ module CLIO
 		
 		.WA(DSP_EO_ADDR[3:0]),
 		.WD(DSP_EO_DATA),
-		.WE(DSP_EORAM_WE & CE & CE_R),
+		.WE(DSP_EORAM_WE & DSP_EN & CE_R),
 		
 		.RA(DSP_ADDR[3:0]),
 		.RD(DSP_EORAM_DO)
@@ -1067,7 +1083,7 @@ module CLIO
 		if (!RST_N) begin
 			DSP_NOISE <= 0;
 		end
-		else if (EN && CE && CE_R) begin
+		else if (EN && DSP_EN && CE_R) begin
 			DSP_NOISE <= DSP_NOISE + 16'd1;//TODO
 		end
 	end
@@ -1080,7 +1096,7 @@ module CLIO
 		if (!RST_N) begin
 			AUDLOCK <= 0;
 		end
-		else if (EN && CE && CE_R) begin
+		else if (EN && DSP_EN && CE_R) begin
 			if (AUDLOCK_WE) begin
 				AUDLOCK <= DSP_EO_DATA[15];
 			end
@@ -1096,24 +1112,27 @@ module CLIO
 			DSP_SEMAPHORE <= '0;
 			DSP_SEMAPHORE_STAT <= '0;
 		end
-		else if (EN && CE && CE_R) begin
-			if (SEMAACK_WE) begin
-				DSP_SEMAPHORE_STAT[0] <= 1;
-			end
-			else if (SEMAPHORE_WE) begin
-				DSP_SEMAPHORE <= DSP_EO_DATA;
-				DSP_SEMAPHORE_STAT <= '0;
-				DSP_SEMAPHORE_STAT[2] <= 1;
+		else if (EN && CE_R) begin
+			if (DSP_EN) begin
+				if (SEMAACK_WE) begin
+					DSP_SEMAPHORE_STAT[0] <= 1;
+				end
+				else if (SEMAPHORE_WE) begin
+					DSP_SEMAPHORE <= DSP_EO_DATA;
+					DSP_SEMAPHORE_STAT <= '0;
+					DSP_SEMAPHORE_STAT[2] <= 1;
+				end
 			end
 			
-			
-			if (DSP_SEMA_ACK) begin
-				DSP_SEMAPHORE_STAT[1] <= 1;
-			end
-			else if (DSP_SEMA_WE) begin
-				DSP_SEMAPHORE <= CPU_DI[15:0];
-				DSP_SEMAPHORE_STAT <= '0;
-				DSP_SEMAPHORE_STAT[3] <= 1;
+			if (IO_EN) begin
+				if (DSP_SEMA_ACK) begin
+					DSP_SEMAPHORE_STAT[1] <= 1;
+				end
+				else if (DSP_SEMA_WE) begin
+					DSP_SEMAPHORE <= CPU_DI[15:0];
+					DSP_SEMAPHORE_STAT <= '0;
+					DSP_SEMAPHORE_STAT[3] <= 1;
+				end
 			end
 		end
 	end
@@ -1128,11 +1147,16 @@ module CLIO
 			DSP_CPUINT <= '0;
 			DSP_CPUINT_REQ <= 0;
 		end
-		else if (EN && CE && CE_R) begin
-			DSP_CPUINT_REQ <= 0;
-			if (CPUINT_WE) begin
-				DSP_CPUINT <= DSP_EO_DATA;
-				DSP_CPUINT_REQ <= 1;
+		else if (EN && CE_R) begin
+			if (IO_EN) begin
+				DSP_CPUINT_REQ <= 0;
+			end
+			
+			if (DSP_EN) begin
+				if (CPUINT_WE) begin
+					DSP_CPUINT <= DSP_EO_DATA;
+					DSP_CPUINT_REQ <= 1;
+				end
 			end
 		end
 	end
@@ -1146,7 +1170,7 @@ module CLIO
 			RELOAD <= '0;
 			DSP_RESET <= 0;
 		end
-		else if (EN && CE && CE_R) begin
+		else if (EN && DSP_EN && CE_R) begin
 			DSP_RESET <= 0;
 			
 			if (DSP_GW) CNTR <= CNTR - 16'd1;
@@ -1196,19 +1220,19 @@ module CLIO
 //	bit          EIFIFO_RDREQ[13];
 	bit  [15: 0] EIFIFO_Q[13];
 	bit  [ 3: 0] EIFIFO_COUNT[13];
-	CLIO_DSP_FIFO EIFIFO0  (.CLK(CLK), .EN(EN), .RST(FIFOINIT[ 0]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[ 0] & CE & CE_R), .RDREQ(EIFIFO0_OE  & CE & CE_R), .Q(EIFIFO_Q[ 0]), .COUNT(EIFIFO_COUNT[ 0]));
-	CLIO_DSP_FIFO EIFIFO1  (.CLK(CLK), .EN(EN), .RST(FIFOINIT[ 1]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[ 1] & CE & CE_R), .RDREQ(EIFIFO1_OE  & CE & CE_R), .Q(EIFIFO_Q[ 1]), .COUNT(EIFIFO_COUNT[ 1]));
-	CLIO_DSP_FIFO EIFIFO2  (.CLK(CLK), .EN(EN), .RST(FIFOINIT[ 2]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[ 2] & CE & CE_R), .RDREQ(EIFIFO2_OE  & CE & CE_R), .Q(EIFIFO_Q[ 2]), .COUNT(EIFIFO_COUNT[ 2]));
-	CLIO_DSP_FIFO EIFIFO3  (.CLK(CLK), .EN(EN), .RST(FIFOINIT[ 3]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[ 3] & CE & CE_R), .RDREQ(EIFIFO3_OE  & CE & CE_R), .Q(EIFIFO_Q[ 3]), .COUNT(EIFIFO_COUNT[ 3]));
-	CLIO_DSP_FIFO EIFIFO4  (.CLK(CLK), .EN(EN), .RST(FIFOINIT[ 4]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[ 4] & CE & CE_R), .RDREQ(EIFIFO4_OE  & CE & CE_R), .Q(EIFIFO_Q[ 4]), .COUNT(EIFIFO_COUNT[ 4]));
-	CLIO_DSP_FIFO EIFIFO5  (.CLK(CLK), .EN(EN), .RST(FIFOINIT[ 5]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[ 5] & CE & CE_R), .RDREQ(EIFIFO5_OE  & CE & CE_R), .Q(EIFIFO_Q[ 5]), .COUNT(EIFIFO_COUNT[ 5]));
-	CLIO_DSP_FIFO EIFIFO6  (.CLK(CLK), .EN(EN), .RST(FIFOINIT[ 6]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[ 6] & CE & CE_R), .RDREQ(EIFIFO6_OE  & CE & CE_R), .Q(EIFIFO_Q[ 6]), .COUNT(EIFIFO_COUNT[ 6]));
-	CLIO_DSP_FIFO EIFIFO7  (.CLK(CLK), .EN(EN), .RST(FIFOINIT[ 7]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[ 7] & CE & CE_R), .RDREQ(EIFIFO7_OE  & CE & CE_R), .Q(EIFIFO_Q[ 7]), .COUNT(EIFIFO_COUNT[ 7]));
-	CLIO_DSP_FIFO EIFIFO8  (.CLK(CLK), .EN(EN), .RST(FIFOINIT[ 8]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[ 8] & CE & CE_R), .RDREQ(EIFIFO8_OE  & CE & CE_R), .Q(EIFIFO_Q[ 8]), .COUNT(EIFIFO_COUNT[ 8]));
-	CLIO_DSP_FIFO EIFIFO9  (.CLK(CLK), .EN(EN), .RST(FIFOINIT[ 9]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[ 9] & CE & CE_R), .RDREQ(EIFIFO9_OE  & CE & CE_R), .Q(EIFIFO_Q[ 9]), .COUNT(EIFIFO_COUNT[ 9]));
-	CLIO_DSP_FIFO EIFIFO10 (.CLK(CLK), .EN(EN), .RST(FIFOINIT[10]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[10] & CE & CE_R), .RDREQ(EIFIFO10_OE & CE & CE_R), .Q(EIFIFO_Q[10]), .COUNT(EIFIFO_COUNT[10]));
-	CLIO_DSP_FIFO EIFIFO11 (.CLK(CLK), .EN(EN), .RST(FIFOINIT[11]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[11] & CE & CE_R), .RDREQ(EIFIFO11_OE & CE & CE_R), .Q(EIFIFO_Q[11]), .COUNT(EIFIFO_COUNT[11]));
-	CLIO_DSP_FIFO EIFIFO12 (.CLK(CLK), .EN(EN), .RST(FIFOINIT[12]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[12] & CE & CE_R), .RDREQ(EIFIFO12_OE & CE & CE_R), .Q(EIFIFO_Q[12]), .COUNT(EIFIFO_COUNT[12]));
+	CLIO_DSP_FIFO EIFIFO0  (.CLK(CLK), .EN(EN), .RST(FIFOINIT[ 0]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[ 0] & IO_EN & CE_R), .RDREQ(EIFIFO0_OE  & DSP_EN & CE_R), .Q(EIFIFO_Q[ 0]), .COUNT(EIFIFO_COUNT[ 0]));
+	CLIO_DSP_FIFO EIFIFO1  (.CLK(CLK), .EN(EN), .RST(FIFOINIT[ 1]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[ 1] & IO_EN & CE_R), .RDREQ(EIFIFO1_OE  & DSP_EN & CE_R), .Q(EIFIFO_Q[ 1]), .COUNT(EIFIFO_COUNT[ 1]));
+	CLIO_DSP_FIFO EIFIFO2  (.CLK(CLK), .EN(EN), .RST(FIFOINIT[ 2]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[ 2] & IO_EN & CE_R), .RDREQ(EIFIFO2_OE  & DSP_EN & CE_R), .Q(EIFIFO_Q[ 2]), .COUNT(EIFIFO_COUNT[ 2]));
+	CLIO_DSP_FIFO EIFIFO3  (.CLK(CLK), .EN(EN), .RST(FIFOINIT[ 3]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[ 3] & IO_EN & CE_R), .RDREQ(EIFIFO3_OE  & DSP_EN & CE_R), .Q(EIFIFO_Q[ 3]), .COUNT(EIFIFO_COUNT[ 3]));
+	CLIO_DSP_FIFO EIFIFO4  (.CLK(CLK), .EN(EN), .RST(FIFOINIT[ 4]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[ 4] & IO_EN & CE_R), .RDREQ(EIFIFO4_OE  & DSP_EN & CE_R), .Q(EIFIFO_Q[ 4]), .COUNT(EIFIFO_COUNT[ 4]));
+	CLIO_DSP_FIFO EIFIFO5  (.CLK(CLK), .EN(EN), .RST(FIFOINIT[ 5]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[ 5] & IO_EN & CE_R), .RDREQ(EIFIFO5_OE  & DSP_EN & CE_R), .Q(EIFIFO_Q[ 5]), .COUNT(EIFIFO_COUNT[ 5]));
+	CLIO_DSP_FIFO EIFIFO6  (.CLK(CLK), .EN(EN), .RST(FIFOINIT[ 6]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[ 6] & IO_EN & CE_R), .RDREQ(EIFIFO6_OE  & DSP_EN & CE_R), .Q(EIFIFO_Q[ 6]), .COUNT(EIFIFO_COUNT[ 6]));
+	CLIO_DSP_FIFO EIFIFO7  (.CLK(CLK), .EN(EN), .RST(FIFOINIT[ 7]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[ 7] & IO_EN & CE_R), .RDREQ(EIFIFO7_OE  & DSP_EN & CE_R), .Q(EIFIFO_Q[ 7]), .COUNT(EIFIFO_COUNT[ 7]));
+	CLIO_DSP_FIFO EIFIFO8  (.CLK(CLK), .EN(EN), .RST(FIFOINIT[ 8]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[ 8] & IO_EN & CE_R), .RDREQ(EIFIFO8_OE  & DSP_EN & CE_R), .Q(EIFIFO_Q[ 8]), .COUNT(EIFIFO_COUNT[ 8]));
+	CLIO_DSP_FIFO EIFIFO9  (.CLK(CLK), .EN(EN), .RST(FIFOINIT[ 9]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[ 9] & IO_EN & CE_R), .RDREQ(EIFIFO9_OE  & DSP_EN & CE_R), .Q(EIFIFO_Q[ 9]), .COUNT(EIFIFO_COUNT[ 9]));
+	CLIO_DSP_FIFO EIFIFO10 (.CLK(CLK), .EN(EN), .RST(FIFOINIT[10]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[10] & IO_EN & CE_R), .RDREQ(EIFIFO10_OE & DSP_EN & CE_R), .Q(EIFIFO_Q[10]), .COUNT(EIFIFO_COUNT[10]));
+	CLIO_DSP_FIFO EIFIFO11 (.CLK(CLK), .EN(EN), .RST(FIFOINIT[11]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[11] & IO_EN & CE_R), .RDREQ(EIFIFO11_OE & DSP_EN & CE_R), .Q(EIFIFO_Q[11]), .COUNT(EIFIFO_COUNT[11]));
+	CLIO_DSP_FIFO EIFIFO12 (.CLK(CLK), .EN(EN), .RST(FIFOINIT[12]), .DATA(EIFIFO_DATA), .WRREQ(EIFIFO_WRREQ[12] & IO_EN & CE_R), .RDREQ(EIFIFO12_OE & DSP_EN & CE_R), .Q(EIFIFO_Q[12]), .COUNT(EIFIFO_COUNT[12]));
 	wire [ 3: 0] EIFIFO_STAT[15] = '{{EIFIFO_COUNT[0]},
 	                                 {EIFIFO_COUNT[1]},
 												{EIFIFO_COUNT[2]},
@@ -1237,10 +1261,10 @@ module CLIO
 												(DMA_FROM_DSP_READ[1] || DMA_FROM_DSP_READ[0]) && DMA_CHAN[3:0] == 4'h3};
 	bit  [15: 0] EOFIFO_Q[4];
 	bit  [ 3: 0] EOFIFO_COUNT[4];
-	CLIO_DSP_FIFO EOFIFO0 (.CLK(CLK), .EN(EN), .RST(FIFOINIT[16]), .DATA(DSP_EO_DATA), .WRREQ(EOFIFO0_WE & CE & CE_R), .RDREQ(EOFIFO_RDREQ[0] & CE & CE_R), .Q(EOFIFO_Q[0]), .COUNT(EOFIFO_COUNT[0]));
-	CLIO_DSP_FIFO EOFIFO1 (.CLK(CLK), .EN(EN), .RST(FIFOINIT[17]), .DATA(DSP_EO_DATA), .WRREQ(EOFIFO1_WE & CE & CE_R), .RDREQ(EOFIFO_RDREQ[1] & CE & CE_R), .Q(EOFIFO_Q[1]), .COUNT(EOFIFO_COUNT[1]));
-	CLIO_DSP_FIFO EOFIFO2 (.CLK(CLK), .EN(EN), .RST(FIFOINIT[18]), .DATA(DSP_EO_DATA), .WRREQ(EOFIFO2_WE & CE & CE_R), .RDREQ(EOFIFO_RDREQ[2] & CE & CE_R), .Q(EOFIFO_Q[2]), .COUNT(EOFIFO_COUNT[2]));
-	CLIO_DSP_FIFO EOFIFO3 (.CLK(CLK), .EN(EN), .RST(FIFOINIT[19]), .DATA(DSP_EO_DATA), .WRREQ(EOFIFO3_WE & CE & CE_R), .RDREQ(EOFIFO_RDREQ[3] & CE & CE_R), .Q(EOFIFO_Q[3]), .COUNT(EOFIFO_COUNT[3]));
+	CLIO_DSP_FIFO EOFIFO0 (.CLK(CLK), .EN(EN), .RST(FIFOINIT[16]), .DATA(DSP_EO_DATA), .WRREQ(EOFIFO0_WE & DSP_EN & CE_R), .RDREQ(EOFIFO_RDREQ[0] & IO_EN & CE_R), .Q(EOFIFO_Q[0]), .COUNT(EOFIFO_COUNT[0]));
+	CLIO_DSP_FIFO EOFIFO1 (.CLK(CLK), .EN(EN), .RST(FIFOINIT[17]), .DATA(DSP_EO_DATA), .WRREQ(EOFIFO1_WE & DSP_EN & CE_R), .RDREQ(EOFIFO_RDREQ[1] & IO_EN & CE_R), .Q(EOFIFO_Q[1]), .COUNT(EOFIFO_COUNT[1]));
+	CLIO_DSP_FIFO EOFIFO2 (.CLK(CLK), .EN(EN), .RST(FIFOINIT[18]), .DATA(DSP_EO_DATA), .WRREQ(EOFIFO2_WE & DSP_EN & CE_R), .RDREQ(EOFIFO_RDREQ[2] & IO_EN & CE_R), .Q(EOFIFO_Q[2]), .COUNT(EOFIFO_COUNT[2]));
+	CLIO_DSP_FIFO EOFIFO3 (.CLK(CLK), .EN(EN), .RST(FIFOINIT[19]), .DATA(DSP_EO_DATA), .WRREQ(EOFIFO3_WE & DSP_EN & CE_R), .RDREQ(EOFIFO_RDREQ[3] & IO_EN & CE_R), .Q(EOFIFO_Q[3]), .COUNT(EOFIFO_COUNT[3]));
 	wire [ 3: 0] EOFIFO_STAT[4] = '{{EOFIFO_COUNT[0]},
 	                                {EOFIFO_COUNT[1]},
 											  {EOFIFO_COUNT[2]},
@@ -1258,40 +1282,46 @@ module CLIO
 			EIFIFO_BUF <= '{13{'0}};
 			EIFIFO_BUF_EMPTY <= '{13{0}};
 		end
-		else if (EN && CE && CE_R) begin
-			EIFIFO_OE_LATCH[ 0] <= EIFIFO0_OE;
-			EIFIFO_OE_LATCH[ 1] <= EIFIFO1_OE;
-			EIFIFO_OE_LATCH[ 2] <= EIFIFO2_OE;
-			EIFIFO_OE_LATCH[ 3] <= EIFIFO3_OE;
-			EIFIFO_OE_LATCH[ 4] <= EIFIFO4_OE;
-			EIFIFO_OE_LATCH[ 5] <= EIFIFO5_OE;
-			EIFIFO_OE_LATCH[ 6] <= EIFIFO6_OE;
-			EIFIFO_OE_LATCH[ 7] <= EIFIFO7_OE;
-			EIFIFO_OE_LATCH[ 8] <= EIFIFO8_OE;
-			EIFIFO_OE_LATCH[ 9] <= EIFIFO9_OE;
-			EIFIFO_OE_LATCH[10] <= EIFIFO10_OE;
-			EIFIFO_OE_LATCH[11] <= EIFIFO11_OE;
-			EIFIFO_OE_LATCH[12] <= EIFIFO12_OE;
-			EOFIFO_WE_LATCH[ 0] <= EOFIFO0_WE;
-			EOFIFO_WE_LATCH[ 1] <= EOFIFO1_WE;
-			EOFIFO_WE_LATCH[ 2] <= EOFIFO2_WE;
-			EOFIFO_WE_LATCH[ 3] <= EOFIFO3_WE;
-			
-			if ((EIFIFO_OE || EIFIFO_OE2) && DSP_EI_OE) begin
-				EIFIFO_BUF[DSP_EI_ADDR[3:0]] <= EIFIFO_Q[DSP_EI_ADDR[3:0]];
-				EIFIFO_BUF_EMPTY[DSP_EI_ADDR[3:0]] <= 1;
+		else if (EN && CE_R) begin
+			if (DSP_EN) begin
+				EIFIFO_OE_LATCH[ 0] <= EIFIFO0_OE;
+				EIFIFO_OE_LATCH[ 1] <= EIFIFO1_OE;
+				EIFIFO_OE_LATCH[ 2] <= EIFIFO2_OE;
+				EIFIFO_OE_LATCH[ 3] <= EIFIFO3_OE;
+				EIFIFO_OE_LATCH[ 4] <= EIFIFO4_OE;
+				EIFIFO_OE_LATCH[ 5] <= EIFIFO5_OE;
+				EIFIFO_OE_LATCH[ 6] <= EIFIFO6_OE;
+				EIFIFO_OE_LATCH[ 7] <= EIFIFO7_OE;
+				EIFIFO_OE_LATCH[ 8] <= EIFIFO8_OE;
+				EIFIFO_OE_LATCH[ 9] <= EIFIFO9_OE;
+				EIFIFO_OE_LATCH[10] <= EIFIFO10_OE;
+				EIFIFO_OE_LATCH[11] <= EIFIFO11_OE;
+				EIFIFO_OE_LATCH[12] <= EIFIFO12_OE;
+				EOFIFO_WE_LATCH[ 0] <= EOFIFO0_WE;
+				EOFIFO_WE_LATCH[ 1] <= EOFIFO1_WE;
+				EOFIFO_WE_LATCH[ 2] <= EOFIFO2_WE;
+				EOFIFO_WE_LATCH[ 3] <= EOFIFO3_WE;
+				
+				if ((EIFIFO_OE || EIFIFO_OE2) && DSP_EI_OE) begin
+					EIFIFO_BUF[DSP_EI_ADDR[3:0]] <= EIFIFO_Q[DSP_EI_ADDR[3:0]];
+					EIFIFO_BUF_EMPTY[DSP_EI_ADDR[3:0]] <= 1;
+				end
 			end
-			if (EIFIFO_BUF_WE) begin
-				EIFIFO_BUF[DSP_ADDR[3:0]] <= DSP_DI;
-				EIFIFO_BUF_EMPTY[DSP_ADDR[3:0]] <= 0;
+			if (IO_EN) begin
+				if (EIFIFO_BUF_WE) begin
+					EIFIFO_BUF[DSP_ADDR[3:0]] <= DSP_DI;
+					EIFIFO_BUF_EMPTY[DSP_ADDR[3:0]] <= 0;
+				end
 			end
 		end
 	end
 	
+`ifdef DEBUG
 	assign DBG_FIFO_CHANGE = (EIFIFO0_OE|EIFIFO1_OE|EIFIFO2_OE|EIFIFO3_OE|EIFIFO4_OE|EIFIFO5_OE|EIFIFO6_OE|EIFIFO7_OE|EIFIFO8_OE|EIFIFO9_OE|EIFIFO10_OE|EIFIFO11_OE|EIFIFO12_OE
 	                          |EIFIFO_WRREQ[0]|EIFIFO_WRREQ[1]|EIFIFO_WRREQ[2]|EIFIFO_WRREQ[3]|EIFIFO_WRREQ[4]|EIFIFO_WRREQ[5]|EIFIFO_WRREQ[6]|EIFIFO_WRREQ[7]|EIFIFO_WRREQ[8]|EIFIFO_WRREQ[9]|EIFIFO_WRREQ[10]|EIFIFO_WRREQ[1]|EIFIFO_WRREQ[12]
 									  //|EOFIFO0_WE|EOFIFO1_WE|EOFIFO2_WE|EOFIFO3_WE|EOFIFO_RDREQ[0]|EOFIFO_RDREQ[1]|EOFIFO_RDREQ[2]|EOFIFO_RDREQ[3]
 									  ) & CE_R;
+`endif
 	
 	bit  [ 3: 0] EOFIFO_FLUSH;
 	wire EOFIFO_FLUSH_WE = (DSP_EO_ADDR == 8'hFD) && DSP_EO_WE;	//0x3FD
@@ -1300,7 +1330,7 @@ module CLIO
 			EOFIFO_FLUSH <= '0;
 		end
 		else begin
-			if (EN && CE && CE_R) begin
+			if (EN && DSP_EN && CE_R) begin
 				EOFIFO_FLUSH <= '0;
 				if (EOFIFO_FLUSH_WE) begin
 					EOFIFO_FLUSH <= DSP_EO_DATA[3:0];
@@ -1320,12 +1350,14 @@ module CLIO
 			AUDWS <= 0;
 		end
 		else begin
-			if (EN && CE && CE_R) begin
+			if (EN && DSP_EN && CE_R) begin
 				if (AUDIO_WE) begin
 					AUDIO[DSP_EO_ADDR[0]] <= DSP_EO_DATA;
 					
+`ifdef DEBUG
 					TEMP = $signed(DSP_EO_DATA) >= $signed(AUDIO[0]) ? $signed(DSP_EO_DATA) - $signed(AUDIO[0]) : $signed(AUDIO[0]) - $signed(DSP_EO_DATA);
 					if (!DSP_EO_ADDR[0]) DBG_HOOK <= (TEMP >= 16'd1024);
+`endif
 				end
 				AUDWS <= 0;
 			end
@@ -1369,8 +1401,7 @@ module CLIO
 		
 		.PAL(PAL),
 		
-		.VCE_R(VCE_R),
-		.VCE_F(VCE_F),
+		.VCE(VCE),
 		.HSYNC_N(HSYNC_N),
 		.VSYNC_N(VSYNC_N),
 		
@@ -1384,6 +1415,7 @@ module CLIO
 		.PCSC(PCSC),
 		
 		.AD(AD),
+		.DE(DE),
 		
 		.DBG_EXT(DBG_EXT)
 	);
@@ -1393,7 +1425,7 @@ module CLIO
 			VINT0_REQ <= 0;
 			VINT1_REQ <= 0;
 		end
-		else if (VCE_R) begin
+		else if (VCE) begin
 			if (HCNT == 0) begin
 				if (VCNT == VINT0[8:0]) VINT0_REQ <= 1; 
 				if (VCNT == VINT1[8:0]) VINT1_REQ <= 1;
