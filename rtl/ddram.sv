@@ -90,10 +90,11 @@ module ddram
 		bit read_lprepend,read_rprepend;
 		bit read_lpend,read_rpend;
 		bit write_lprepend,write_rprepend;
-		bit burst_lact,burst_ract;
+		bit burst_lact,burst_ract,burst_interrupted;
 		bit burst_write;
 		bit [7:0] burst_ba;
 		bit [19:2] laddr_ff,raddr_ff;
+		bit [63:0] bin_save;
 		
 		old_blwr <= blwr; old_brwr <= brwr;
 		old_blrd <= blrd; old_brrd <= brrd;
@@ -230,8 +231,14 @@ module ddram
 		{blte,brte} <= 0;
 		if (rst && !old_rst) begin
 			state <= 0;
+		end else if (DDRAM_BUSY) begin
+			case (state)
+				4'd1: if (blte || brte) begin
+					bin_save		<= bin;
+					burst_interrupted <= 1;
+				end
+			endcase
 		end else if (!DDRAM_BUSY) begin
-			burst_write <= 0;
 			ram_write <= 0;
 			ram_read  <= 0;
 			case (state)
@@ -347,11 +354,11 @@ module ddram
 				end
 				
 				4'd1: begin
-					burst_write <= 1;
-					burst_ba      <= {{2{burst_lact}},{2{burst_ract}},{2{burst_lact}},{2{burst_ract}}};
-//					ram_din		<= bin;
-//					ram_write 	<= 1;
-//					ram_ba      <= {{2{burst_lact}},{2{burst_ract}},{2{burst_lact}},{2{burst_ract}}};
+					ram_din		<= burst_interrupted ? bin_save : bin;
+					ram_write 	<= 1;
+					ram_ba      <= {{2{burst_lact}},{2{burst_ract}},{2{burst_lact}},{2{burst_ract}}};
+					burst_interrupted <= 0;
+					
 					ba <= wpos;
 					if (wpos != 8'd127 && wpos != 8'd255) begin
 						blte <= burst_lact;
@@ -436,12 +443,6 @@ module ddram
 					state <= 4'd0;
 				end
 			endcase
-			
-			if (burst_write) begin
-				ram_din		<= bin;
-				ram_write 	<= 1;
-				ram_ba      <= burst_ba;
-			end
 		end
 	end
 	
@@ -463,9 +464,7 @@ module ddram
 			1'b1: rdout = rcache_q[15:00];
 		endcase
 	end
-//	assign ldout = lbuf[read_laddr[5:2]];
-//	assign rdout = rbuf[read_raddr[5:2]];
-	assign busy = /*burst_read_lbusy | burst_read_rbusy | burst_write_lbusy | burst_write_rbusy |*/ write_lbusy | write_rbusy | read_lbusy | read_rbusy;
+	assign busy = write_lbusy | write_rbusy | read_lbusy | read_rbusy;
 	assign bbusy = burst_read_lbusy | burst_read_rbusy | burst_write_lbusy | burst_write_rbusy;
 	
 	assign io_dout = io_rbuf;

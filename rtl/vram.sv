@@ -201,14 +201,10 @@ module P3DO_VRAM #(parameter USE_BRAM = 0) (
 	wire         MEM1_SSEL = (ESADDR >= ({BRAM_OFFS+0,16'h0000}>>2) && ESADDR <= ({BRAM_OFFS+3,16'hFFFF}>>2)) && USE_BRAM;
 	wire         MEM2_SSEL = (ESADDR >= ({BRAM_OFFS+4,16'h0000}>>2) && ESADDR <= ({BRAM_OFFS+5,16'hBFFF}>>2)) || (ESADDR >= (20'hFC000>>2));
 	
-	bit  [15: 4] MEM_SWADDR;
-	wire[255: 0] MEM_SDATA = FW_EXEC_DELAYED ? {16{COLOR}} : {SR_Q[239:224],SR_Q[255:240],SR_Q[207:192],SR_Q[223:208],SR_Q[175:160],SR_Q[191:176],SR_Q[143:128],SR_Q[159:144],SR_Q[111:96],SR_Q[127:112],SR_Q[79:64],SR_Q[95:80],SR_Q[47:32],SR_Q[63:48],SR_Q[15:0],SR_Q[31:16]};//SR_Q;
-	bit          MEM1_SWREN,MEM2_SWREN;
-	always @(posedge CLK_MEM) begin
-		MEM_SWADDR <= ESADDR[15:4];
-		MEM1_SWREN <= (MWT_EXEC | FW_EXEC) & MEM1_SSEL & ISTE;
-		MEM2_SWREN <= (MWT_EXEC | FW_EXEC) & MEM2_SSEL & ISTE;
-	end
+	wire [15: 4] MEM_SWADDR = ESADDR[15:4];
+	wire[255: 0] MEM_SDATA = FW_EXEC ? {16{COLOR}} : {SR_Q[239:224],SR_Q[255:240],SR_Q[207:192],SR_Q[223:208],SR_Q[175:160],SR_Q[191:176],SR_Q[143:128],SR_Q[159:144],SR_Q[111:96],SR_Q[127:112],SR_Q[79:64],SR_Q[95:80],SR_Q[47:32],SR_Q[63:48],SR_Q[15:0],SR_Q[31:16]};//SR_Q;
+	wire         MEM1_SWREN = (MWT_EXEC | FW_EXEC) & MEM1_SSEL & ISTE;
+	wire         MEM2_SWREN = (MWT_EXEC | FW_EXEC) & MEM2_SSEL & ISTE;
 	
 	bit  [15: 0] MEM1_Q;
 	bit [255: 0] MEM1_SQ;
@@ -221,7 +217,7 @@ module P3DO_VRAM #(parameter USE_BRAM = 0) (
 		.Q(MEM1_Q),
 		
 		.SCLK(CLK_MEM),
-		.SADDR(RT_EXEC ? ESADDR[15:4] : MEM_SWADDR[15:4]),
+		.SADDR(MEM_SWADDR[15:4]),
 		.SDATA(MEM_SDATA),
 		.SWREN(MEM1_SWREN),
 		.SQ(MEM1_SQ)
@@ -238,7 +234,7 @@ module P3DO_VRAM #(parameter USE_BRAM = 0) (
 		.Q(MEM2_Q),
 		
 		.SCLK(CLK_MEM),
-		.SADDR(RT_EXEC ? ESADDR[14:4] : MEM_SWADDR[14:4]),
+		.SADDR(MEM_SWADDR[14:4]),
 		.SDATA(MEM_SDATA),
 		.SWREN(MEM2_SWREN),
 		.SQ(MEM2_SQ)
@@ -265,16 +261,9 @@ module P3DO_VRAM #(parameter USE_BRAM = 0) (
 		.Q(SR_Q)
 	);
 	
-	bit          FW_EXEC_DELAYED;
-	bit  [ 3: 1] SR_RADDR_DELAYED;
-	always @(posedge CLK_MEM) begin
-		FW_EXEC_DELAYED <= FW_EXEC;
-		SR_RADDR_DELAYED <= SR_RADDR[3:1];
-	end
-	
 	bit  [31: 0] SR_DATA;
 	always_comb begin
-		case (SR_RADDR_DELAYED)
+		case (SR_RADDR[3:1])
 			3'h0: SR_DATA = SR_Q[031:000];
 			3'h1: SR_DATA = SR_Q[063:032];
 			3'h2: SR_DATA = SR_Q[095:064];
@@ -287,7 +276,7 @@ module P3DO_VRAM #(parameter USE_BRAM = 0) (
 	end
 	
 	assign ESADDR = {MEM_ROW,SREG_POS};
-	assign ESDATA = FW_EXEC_DELAYED ? {2{COLOR}} : SR_DATA;
+	assign ESDATA = FW_EXEC ? {2{COLOR}} : SR_DATA;
 	assign ESWR = (MWT_EXEC | FW_EXEC) & ~ISTE;
 	assign ESRD = RT_REQ & ~ISTE;
 	
