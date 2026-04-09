@@ -24,8 +24,10 @@ module sdram
 	input              ras,
 	input      [ 3: 0] code,
 	
-	input              rfs,
+	input              rfs
 
+`ifdef DEBUG
+	                   ,
 	output [1:0] dbg_ctrl_bank,
 	output [1:0] dbg_ctrl_cmd,
 	output       dbg_ctrl_we,
@@ -38,9 +40,11 @@ module sdram
 	output reg [15: 0] dbg_sdram_d,
 	
 	output reg [31: 0] dbg_no_refresh,
+	output reg [23:0] dbg_numrfs_in_64ms,
 	
 	output reg [21:11] dbg_open_page,
 	output reg         dbg_cross_page
+`endif
 );
 
 	localparam RASCAS_DELAY   = 3'd2; // tRCD=20ns -> 2 cycles
@@ -113,9 +117,8 @@ module sdram
 	} state_t;
 	state_t state[6];
 	reg [ 3: 0] st_num;
-//	reg [15: 0] data;
 	
-	reg ras_old;
+	reg ras_old,rfs_old;
 	always @(posedge clk) begin
 		reg sync_old;
 		
@@ -127,15 +130,19 @@ module sdram
 			
 			if (sync && !sync_old) begin
 				st_num <= 4'd1;
-//				data <= din;
 			end
 			
 			ras_old <= ras;
+			rfs_old <= rfs;
 		end
 	end
 	
 	always @(posedge clk) begin
+		reg page_opened = 0;
+		
+`ifdef DEBUG
 		dbg_no_refresh <= dbg_no_refresh + 1'd1;
+`endif
 		
 		state[0] <= '0;
 		if (!init_done) begin
@@ -146,13 +153,16 @@ module sdram
 		end else begin
 			if (ras && code == 4'hA) begin
 				case (st_num[2:0])
-				3'd6 : begin state[0].CMD  <= CTRL_RAS;
+				3'd5 : begin state[0].CMD  <= CTRL_RAS;
 							 	 state[0].ADDR <= {addr,1'b0};
 				             state[0].BANK <= 2'd0; end
 				default:;
 				endcase
+				page_opened <= 1;
+`ifdef DEBUG
 				dbg_cross_page <= 0;
 				dbg_open_page <= addr[21:11];
+`endif
 			end
 			else if (ras && code == 4'h0) begin
 				case (st_num[2:0])
@@ -164,7 +174,9 @@ module sdram
 				endcase
 			end
 			else if (ras && code == 4'h2) begin
+`ifdef DEBUG
 				dbg_cross_page <= (dbg_open_page != addr[21:11]);
+`endif
 			end
 			else if (ras && code == 4'h3) begin
 				case (st_num[2:0])
@@ -182,10 +194,11 @@ module sdram
 				             state[0].BANK <= 2'd0;  end
 				default:;
 				endcase
+`ifdef DEBUG
 				dbg_cross_page <= (dbg_open_page != addr[21:11]);
+`endif
 			end
-//			else if (ras && (code == 4'h6 || code == 4'hE)) begin
-			else if (!ras && !ras_old && (code == 4'h2 || code == 4'h3)) begin
+			else if (ras && (code == 4'h6 || code == 4'hE)) begin
 				case (st_num[2:0])
 				3'd4 : begin state[0].CMD  <= CTRL_RAS;
 								 state[0].BANK <= 2'd0;
@@ -193,7 +206,21 @@ module sdram
 				default:;
 				endcase
 			end
-			else if (!ras && ras_old) begin
+//			else if (!ras && !ras_old && (code == 4'h2 || code == 4'h3)) begin
+//				case (st_num[2:0])
+//				3'd4 : begin state[0].CMD  <= CTRL_RAS;
+//								 state[0].BANK <= 2'd0;
+//								 state[0].RFS  <= 1;  end
+//				default:;
+//				endcase
+//			end
+			else if ((rfs && !rfs_old) || (!rfs && rfs_old)) begin
+				             state[0].CMD  <= CTRL_RAS;
+								 state[0].BANK <= 2'd0;
+								 state[0].RFS  <= 1;  
+			end
+			else if (!ras && ras_old && page_opened) begin
+				page_opened <= 0;
 				case (st_num[2:0])
 				3'd0 : begin state[0].CMD  <= CTRL_PRE;
 				             state[0].BANK <= 2'd0;  end
@@ -230,7 +257,6 @@ module sdram
 		rbuf <= {rbuf[15:0],SDRAM_DQ};
 		if (out_read1) dout <= rbuf;
 	end
-//	assign dout = rbuf;
 	
 
 	localparam CMD_NOP             = 3'b111;
@@ -265,7 +291,12 @@ module sdram
 		
 		SDRAM_DQ <= 'Z;
 		casex({init_done,ctrl_rfs,ctrl_we,mode,ctrl_cmd})
-			{3'b101, MODE_NORMAL, CTRL_CAS}: begin SDRAM_DQ <= d; dbg_sdram_d <= d; end
+			{3'b101, MODE_NORMAL, CTRL_CAS}: begin 
+				SDRAM_DQ <= d; 
+`ifdef DEBUG
+				dbg_sdram_d <= d;
+`endif
+			end
 										   default: ;
 		endcase
 
@@ -286,7 +317,20 @@ module sdram
 	assign {SDRAM_DQMH,SDRAM_DQML} = SDRAM_A[12:11];
 	
 	
-	
+`ifdef DEBUG
+	always @(posedge clk) begin
+		reg [31: 0] div_cnt;
+		reg [23: 0] num_cnt;
+		
+		if (ctrl_rfs) num_cnt <= num_cnt + 32'd1;
+		
+		div_cnt <= div_cnt + 1;
+		if (div_cnt == 6400000) begin
+			div_cnt <= '0;
+			dbg_numrfs_in_64ms <= num_cnt;
+			num_cnt <= '0;
+		end
+	end
 	assign dbg_ctrl_bank = ctrl_bank;
 	assign dbg_ctrl_cmd = ctrl_cmd;
 	assign dbg_ctrl_we = ctrl_we;
@@ -294,6 +338,7 @@ module sdram
 	assign dbg_data_read = data_read0;
 	assign dbg_out_read = out_read0;
 	assign dbg_out_bank = out_bank;
+`endif
 
 	altddio_out
 	#(

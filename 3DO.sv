@@ -425,6 +425,7 @@ module emu
 				if (id == 32'h031BED09) BRAM_OFFS <= 4'h6;//Quarantine (US)
 				if (id == 32'h06DE0DC2) BRAM_OFFS <= 4'hA;//Road & Track Presents - The Need for Speed (US, EU)
 				if (id == 32'h2D95DCB6) BRAM_OFFS <= 4'h6;//Seal of the Pharaoh (US)
+				if (id == 32'h213128DD) BRAM_OFFS <= 4'h8;//Live! 3DO Magazine CD-ROM 1 (Japan)
 				
 				if (id == 32'h25609184                       ) NEED_DSP_PAUSE <= 1;//Blade Force (US)
 				if (id == 32'h043DCD69 && msf == 32'h69026900) NEED_DSP_PAUSE <= 1;//Decathlon (US) (Unl)
@@ -693,7 +694,7 @@ module emu
 		.ras(!LRAS2_N || !LRAS3_N || !RRAS2_N || !RRAS3_N),
 		.code({3'b000,RCODE[0]} | LCODE),
 		
-		.rfs(1'b0)
+		.rfs(!LRAS0_N || !RRAS0_N)
 	);
 	
 
