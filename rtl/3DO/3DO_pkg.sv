@@ -104,13 +104,14 @@ package P3DO_PKG;
 		bit         LDPIP;
 		bit         SCOBPRE;
 		bit         YOXY;
-		bit [ 1: 0] UNUSED;
+		bit         ACSC;
+		bit         ALSC;
 		bit         ACW;
 		bit         ACCW;
 		bit         TWD;
 		bit         LCE;
 		bit         ACE;
-		bit         ASC;
+		bit         UNUSED;//ASC ??
 		bit         MARIA;
 		bit         PXOR;
 		bit         USEAV;
@@ -121,8 +122,8 @@ package P3DO_PKG;
 		bit         NOBLK;
 		bit [ 3: 0] PIPA;
 	} SCoBFlag_t;
-	parameter bit [31:0] SCoBFlag_WMASK = 32'hFFE7FFFF;
-	parameter bit [31:0] SCoBFlag_RMASK = 32'hFFE7FFFF;
+	parameter bit [31:0] SCoBFlag_WMASK = 32'hFFFFDFFF;
+	parameter bit [31:0] SCoBFlag_RMASK = 32'hFFFFDFFF;
 	parameter bit [31:0] SCoBFlag_INIT = 32'h00000000; 
 	
 	typedef struct packed

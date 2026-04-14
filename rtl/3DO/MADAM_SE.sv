@@ -884,7 +884,7 @@ module MADAM_SE
 	bit  [15: 0] SPR_FIFO_A_OUT;
 	bit          SPR_FIFO_A_HALF;
 	bit          SPR_FIFO_A_EMPTY;
-	MADAM_SPRYTE_DATA_FIFO SPR_FIFO_A //609
+	MADAM_SPRYTE_DATA_FIFO SPR_FIFO_A 
 	(
 		.CLK(CLK),
 		.EN(EN),
@@ -906,7 +906,7 @@ module MADAM_SE
 	bit  [15: 0] SPR_FIFO_B_OUT;
 	bit          SPR_FIFO_B_HALF;
 	bit          SPR_FIFO_B_EMPTY;
-	MADAM_SPRYTE_DATA_FIFO SPR_FIFO_B //609
+	MADAM_SPRYTE_DATA_FIFO SPR_FIFO_B 
 	(
 		.CLK(CLK),
 		.EN(EN),
@@ -1109,7 +1109,7 @@ module MADAM_SE
 	
 	bit          IPS_FIFO_FULL,IPS_FIFO_EMPTY;
 	IPN_t        IPS_FIFO_A_OUT;
-	MADAM_SYNC_FIFO #(29) IPS_FIFO //528
+	MADAM_SYNC_FIFO #(29) IPS_FIFO 
 	(
 		.CLK(CLK),
 		.EN(EN),
@@ -1126,7 +1126,7 @@ module MADAM_SE
 	);
 	
 	IPN_t        IPS_FIFO_B_OUT;
-	MADAM_SYNC_FIFO #(29) IPS_FIFO_B //528
+	MADAM_SYNC_FIFO #(29) IPS_FIFO_B 
 	(
 		.CLK(CLK),
 		.EN(EN),
@@ -1142,7 +1142,7 @@ module MADAM_SE
 		.EMPTY()
 	);
 	
-	IPN_t        IPN_PIPE;//532
+	IPN_t        IPN_PIPE;
 	
 	bit  [15: 0] CFBD_PIPE,CFBD_PIPE_A,CFBD_PIPE_B;
 	always @(posedge CLK or negedge RST_N) begin
@@ -1172,7 +1172,7 @@ module MADAM_SE
 
 	//PPMP
 	bit  [15: 0] PPMP_PEN;
-	MADAM_PPMP PPMP	//616
+	MADAM_PPMP PPMP	
 	(
 		.CLK(CLK),
 		.RST(~RST_N),
@@ -1196,7 +1196,7 @@ module MADAM_SE
 	bit          XY_FIFO_A_WRREQ;
 	bit          XY_FIFO_A_LESSHALF;
 	
-	YX_t         LF_A_XY,LF_B_XY;//561
+	YX_t         LF_A_XY,LF_B_XY;
 	bit          LF_A_LAST,LF_B_LAST;
 	bit          LF_A_RUN,LF_B_RUN;
 	bit          LF_DOLO;
@@ -1207,7 +1207,7 @@ module MADAM_SE
 		CRN_ROW_INIT0,CRN_ROW_INIT1,CRN_ROW_INIT2,CRN_ROW_INIT3,CRN_ROW_INIT4,CRN_ROW_INIT5,CRN_ROW_INIT6,CRN_ROW_INIT7,CRN_ROW_INIT8,CRN_ROW_INIT9,CRN_ROW_INIT10,
 		CRN_PRECALC,CRN_CALC,
 		CRN_REGIS,
-		CRN_OUT,CRN_OUT_SKIP,
+		CRN_OUT,
 		CRN_REGIS_DONE,
 		CRN_END
 	} CornerState_t;
@@ -1281,6 +1281,7 @@ module MADAM_SE
 	);
 	
 	bit          CRNA_DONE,CRNB_DONE;
+	bit          LF_SKIP;
 	always @(posedge CLK or negedge RST_N) begin	
 		bit  [11: 0] X1_A_CLIPPED,X2_A_CLIPPED,X1_B_CLIPPED,X2_B_CLIPPED,LF_A_X2,LF_B_X2;
 		bit          Y_A_CONFLICT,Y_B_CONFLICT;
@@ -1356,7 +1357,7 @@ module MADAM_SE
 					else if (UNPACKER_A_READY && (CRNB_ST == CRN_CALC || !LRFORM)) begin
 						if (MATH_A_STAT.MF || SCOB_FLAG.MARIA) begin
 							REGIS_A_Y <= MATH_A_Y;
-							if (/*MATH_A_Y != REGIS_A_Y &&*/ MATH_A_Y[0] == Y_B[0] && (CRNB_ST == CRN_OUT || CRNB_ST == CRN_OUT_SKIP)) Y_A_CONFLICT <= 1;
+							if (/*MATH_A_Y != REGIS_A_Y &&*/ MATH_A_Y[0] == Y_B[0] && (CRNB_ST == CRN_OUT)) Y_A_CONFLICT <= 1;
 							CRNA_ST <= !MATH_A_STAT.RC ? CRN_OUT : CRN_CALC;
 						end else if (!REGIS_A_START) begin
 							CRNA_ST <= CRN_CALC;
@@ -1370,14 +1371,14 @@ module MADAM_SE
 					if (REGIS_A_LF_REQ) begin
 						REGIS_A_Y <= MATH_A_Y;
 						REGIS_A_OUT <= 1;
-						if (/*MATH_A_Y != REGIS_A_Y &&*/ MATH_A_Y[0] == Y_B[0] && (CRNB_ST == CRN_OUT || CRNB_ST == CRN_OUT_SKIP)) Y_A_CONFLICT <= 1;
+						if (/*MATH_A_Y != REGIS_A_Y &&*/ MATH_A_Y[0] == Y_B[0] && (CRNB_ST == CRN_OUT)) Y_A_CONFLICT <= 1;
 						CRNA_ST <= CRN_OUT;
 					end else if (REGIS_A_DONE) begin
 						CRNA_ST <= CRN_CALC;
 					end
 				end
 				
-				CRN_OUT: if (!XY_FIFO_A_FULL && !LF_A_RUN && CORNER_SEL && CE_F) begin
+				CRN_OUT: if (!XY_FIFO_A_FULL && !LF_A_RUN && !LF_SKIP && CE_F) begin
 					LF_A_LAST <= 0;
 `ifdef DEBUG
 					DBG_CLIP_A <= 0;
@@ -1412,16 +1413,6 @@ module MADAM_SE
 					CRNA_ST <= !REGIS_A_OUT ? CRN_CALC : UNPACKER_A_EOL && REGIS_A_DONE ? CRN_END : REGIS_A_DONE ? CRN_REGIS_DONE : CRN_REGIS; 
 				end
 				
-				CRN_OUT_SKIP: if (CE_F) begin
-					if (LF_A_RUN)
-						CRNA_ST <= CRN_OUT;
-					else begin
-						if (Y_B_CONFLICT) Y_B_CONFLICT <= 0;
-						REGIS_A_OUT <= 0;
-						CRNA_ST <= !REGIS_A_OUT ? CRN_CALC : UNPACKER_A_EOL && REGIS_A_DONE ? CRN_END : REGIS_A_DONE ? CRN_REGIS_DONE : CRN_REGIS; 
-					end
-				end
-				
 				CRN_REGIS_DONE: if (CE_R) begin
 					CRNA_ST <= CRN_CALC; 
 				end
@@ -1434,7 +1425,7 @@ module MADAM_SE
 			endcase
 			
 			if (CE_F) begin
-					if (LF_A_RUN && !XY_FIFO_A_FULL && CORNER_SEL) begin
+					if (LF_A_RUN && !XY_FIFO_A_FULL && !LF_SKIP) begin
 						LF_A_XY.X <= LF_A_XY.X + 12'd1;
 						if (LF_A_XY.X + 12'd1 == LF_A_X2) begin 
 							LF_A_LAST <= UNPACKER_A_EOL && REGIS_A_DONE; 
@@ -1505,7 +1496,7 @@ module MADAM_SE
 					else if (UNPACKER_B_READY && (CRNA_ST == CRN_CALC || !LRFORM)) begin
 						if (MATH_B_STAT.MF || SCOB_FLAG.MARIA) begin
 							REGIS_B_Y <= MATH_B_Y;
-							if (/*MATH_B_Y != REGIS_B_Y &&*/ MATH_B_Y[0] == Y_A[0] && (CRNA_ST == CRN_OUT || CRNA_ST == CRN_OUT_SKIP)) Y_B_CONFLICT <= 1;
+							if (/*MATH_B_Y != REGIS_B_Y &&*/ MATH_B_Y[0] == Y_A[0] && (CRNA_ST == CRN_OUT)) Y_B_CONFLICT <= 1;
 							CRNB_ST <= !MATH_B_STAT.RC ? CRN_OUT : CRN_CALC;
 						end else if (!REGIS_B_START) begin
 							CRNB_ST <= CRN_CALC;
@@ -1519,14 +1510,14 @@ module MADAM_SE
 					if (REGIS_B_LF_REQ) begin
 						REGIS_B_Y <= MATH_B_Y;
 						REGIS_B_OUT <= 1;
-						if (/*MATH_B_Y != REGIS_B_Y &&*/ MATH_B_Y[0] == Y_A[0] && (CRNA_ST == CRN_OUT || CRNA_ST == CRN_OUT_SKIP)) Y_B_CONFLICT <= 1;
+						if (/*MATH_B_Y != REGIS_B_Y &&*/ MATH_B_Y[0] == Y_A[0] && (CRNA_ST == CRN_OUT)) Y_B_CONFLICT <= 1;
 						CRNB_ST <= CRN_OUT;
 					end else if (REGIS_B_DONE) begin
 						CRNB_ST <= CRN_CALC;
 					end
 				end
 				
-				CRN_OUT: if (!XY_FIFO_A_FULL && !LF_B_RUN && CORNER_SEL && CE_F) begin
+				CRN_OUT: if (!XY_FIFO_A_FULL && !LF_B_RUN && !LF_SKIP && CE_F) begin
 					LF_B_LAST <= 0;
 `ifdef DEBUG
 					DBG_CLIP_B <= 0;
@@ -1561,16 +1552,6 @@ module MADAM_SE
 					CRNB_ST <= !REGIS_B_OUT ? CRN_CALC : UNPACKER_B_EOL && REGIS_B_DONE ? CRN_END : REGIS_B_DONE ? CRN_REGIS_DONE : CRN_REGIS; 
 				end
 				
-				CRN_OUT_SKIP: if (CE_F) begin
-					if (LF_B_RUN)
-						CRNB_ST <= CRN_OUT;
-					else begin
-						if (Y_A_CONFLICT) Y_A_CONFLICT <= 0;
-						REGIS_B_OUT <= 0;
-						CRNB_ST <= !REGIS_B_OUT ? CRN_CALC : UNPACKER_B_EOL && REGIS_B_DONE ? CRN_END : REGIS_B_DONE ? CRN_REGIS_DONE : CRN_REGIS; 
-					end
-				end
-				
 				CRN_REGIS_DONE: if (CE_R) begin
 					CRNB_ST <= CRN_CALC; 
 				end
@@ -1583,17 +1564,22 @@ module MADAM_SE
 			endcase
 			
 			if (CE_F) begin
-					if (LF_B_RUN && !XY_FIFO_A_FULL && CORNER_SEL) begin
-						LF_B_XY.X <= LF_B_XY.X + 12'd1;
-						if (LF_B_XY.X + 12'd1 == LF_B_X2) begin 
-							LF_B_LAST <= UNPACKER_B_EOL && REGIS_B_DONE; 
-							LF_B_RUN <= 0;  
-						end
-						LF_B_REQ <= 1;						
+				if (LF_B_RUN && !XY_FIFO_A_FULL && !LF_SKIP) begin
+					LF_B_XY.X <= LF_B_XY.X + 12'd1;
+					if (LF_B_XY.X + 12'd1 == LF_B_X2) begin 
+						LF_B_LAST <= UNPACKER_B_EOL && REGIS_B_DONE; 
+						LF_B_RUN <= 0;  
 					end
+					LF_B_REQ <= 1;						
+				end
 			end
 			
 			if (CE_R) begin
+				LF_SKIP <= 0;
+				if ((XY_A_REQ && IPN_A_RMODE) || (XY_B_REQ && IPN_B_RMODE)) begin
+					LF_SKIP <= 1;
+				end
+				
 //				if ((Y_A_CONFLICT && REGIS_B_Y[0] != REGIS_A_Y[0]) || CRNB_ST == CRN_END) Y_A_CONFLICT <= 0;
 //				if ((Y_B_CONFLICT && REGIS_A_Y[0] != REGIS_B_Y[0]) || CRNA_ST == CRN_END) Y_B_CONFLICT <= 0;
 				
@@ -1615,39 +1601,39 @@ module MADAM_SE
 	always_comb begin
 		MATH_A_CTL = '0;
 		case (CRNA_ST)
-			CRN_ROW_INIT1: begin
+			CRN_ROW_INIT1: if (CE_R) begin
 				MATH_A_CTL.A0CH_INIT = 1;
 			end
-			CRN_ROW_INIT2: begin
+			CRN_ROW_INIT2: if (CE_R) begin
 				MATH_A_CTL.A0CL_INIT = 1;
 			end
-			CRN_ROW_INIT3: begin
+			CRN_ROW_INIT3: if (CE_R) begin
 				MATH_A_CTL.A3CH_INIT = 1;
 			end
-			CRN_ROW_INIT4: begin
+			CRN_ROW_INIT4: if (CE_R) begin
 				MATH_A_CTL.A3CL_INIT = 1;
 			end
-			CRN_ROW_INIT5: begin
+			CRN_ROW_INIT5: if (CE_R) begin
 				MATH_A_CTL.A0DH_INIT = 1;
 				MATH_A_CTL.A3CH_SAVE = 1;
 			end
-			CRN_ROW_INIT6: begin
+			CRN_ROW_INIT6: if (CE_R) begin
 				MATH_A_CTL.A0DL_INIT = 1;
 				MATH_A_CTL.A3CL_SAVE = 1;
 			end
-			CRN_ROW_INIT7: begin
+			CRN_ROW_INIT7: if (CE_R) begin
 				MATH_A_CTL.A3DH_INIT = 1;
 			end
-			CRN_ROW_INIT8: begin
+			CRN_ROW_INIT8: if (CE_R) begin
 				MATH_A_CTL.A3DL_INIT = 1;
 			end
-			CRN_ROW_INIT9: begin
+			CRN_ROW_INIT9: if (CE_R) begin
 				MATH_A_CTL.A3DH_SAVE = 1;
 			end
-			CRN_ROW_INIT10: begin
+			CRN_ROW_INIT10: if (CE_R) begin
 				MATH_A_CTL.A3DL_SAVE = 1;
 			end
-			CRN_PRECALC: begin
+			CRN_PRECALC: if (CE_R) begin
 				MATH_A_CTL.A12C_PRECALC = 1;
 				MATH_A_CTL.X1_MUNK_SEL = 2'b00;
 				MATH_A_CTL.X1_MUNK = 1;
@@ -1658,14 +1644,14 @@ module MADAM_SE
 				MATH_A_CTL.Y_T1_SEL = 2'b00;
 				MATH_A_CTL.Y_UPD = 1;
 			end
-			CRN_CALC: if (UNPACKER_A_READY && (CRNB_ST == CRN_CALC || !LRFORM)) begin
-				MATH_A_CTL.X1_MUNK_SEL = 2'd0;
+			CRN_CALC: if (UNPACKER_A_READY && (CRNB_ST == CRN_CALC || !LRFORM) && CE_R) begin
+				MATH_A_CTL.X1_MUNK_SEL = 2'd0;//MUNKEE_A_CTL.MX;
 				MATH_A_CTL.X1_MUNK = MUNKEE_A_LF_REQ;////////////////
 				MATH_A_CTL.X_ADD01_ASEL = 3'd0;
 				MATH_A_CTL.X_ADD01_BSEL = 3'd4;
 				MATH_A_CTL.X_ADD01_SUB = 0;
 				MATH_A_CTL.X1_UPD = 1;
-				MATH_A_CTL.X2_MUNK_SEL = 2'd2;
+				MATH_A_CTL.X2_MUNK_SEL = 2'd2;//MUNKEE_A_CTL.MX^2'b10;
 				MATH_A_CTL.X2_MUNK = 1;
 				MATH_A_CTL.X2_UPD = 1;
 				MATH_A_CTL.Y_T1_SEL = MATH_A_STAT.YTOP;
@@ -1674,14 +1660,14 @@ module MADAM_SE
 					MATH_A_CTL.A12C_CALC = 1;
 				end
 			end
-			CRN_REGIS:  begin
+			CRN_REGIS: begin
 				if (REGIS_A_DONE) begin
-					MATH_A_CTL.A12C_CALC = 1;
+					if (CE_R) MATH_A_CTL.A12C_CALC = 1;
 				end else begin
-					MATH_A_CTL = REGIS_A_CTL;
+					/*if (CE_R)*/ MATH_A_CTL = REGIS_A_CTL;
 				end
 			end
-			CRN_REGIS_DONE: begin
+			CRN_REGIS_DONE: if (CE_R) begin
 				MATH_A_CTL.A12C_CALC = 1;
 			end
 			default:;
@@ -1689,39 +1675,39 @@ module MADAM_SE
 		
 		MATH_B_CTL = '0;
 		case (CRNB_ST)
-			CRN_ROW_INIT1: begin
+			CRN_ROW_INIT1: if (CE_R) begin
 				MATH_B_CTL.A0CH_INIT = 1;
 			end
-			CRN_ROW_INIT2: begin
+			CRN_ROW_INIT2: if (CE_R) begin
 				MATH_B_CTL.A0CL_INIT = 1;
 			end
-			CRN_ROW_INIT3: begin
+			CRN_ROW_INIT3: if (CE_R) begin
 				MATH_B_CTL.A3CH_INIT = 1;
 			end
-			CRN_ROW_INIT4: begin
+			CRN_ROW_INIT4: if (CE_R) begin
 				MATH_B_CTL.A3CL_INIT = 1;
 			end
-			CRN_ROW_INIT5: begin
+			CRN_ROW_INIT5: if (CE_R) begin
 				MATH_B_CTL.A0DH_INIT = 1;
 				MATH_B_CTL.A3CH_SAVE = 1;
 			end
-			CRN_ROW_INIT6: begin
+			CRN_ROW_INIT6: if (CE_R) begin
 				MATH_B_CTL.A0DL_INIT = 1;
 				MATH_B_CTL.A3CL_SAVE = 1;
 			end
-			CRN_ROW_INIT7: begin
+			CRN_ROW_INIT7: if (CE_R) begin
 				MATH_B_CTL.A3DH_INIT = 1;
 			end
-			CRN_ROW_INIT8: begin
+			CRN_ROW_INIT8: if (CE_R) begin
 				MATH_B_CTL.A3DL_INIT = 1;
 			end
-			CRN_ROW_INIT9: begin
+			CRN_ROW_INIT9: if (CE_R) begin
 				MATH_B_CTL.A3DH_SAVE = 1;
 			end
-			CRN_ROW_INIT10: begin
+			CRN_ROW_INIT10: if (CE_R) begin
 				MATH_B_CTL.A3DL_SAVE = 1;
 			end
-			CRN_PRECALC: begin
+			CRN_PRECALC: if (CE_R) begin
 				MATH_B_CTL.A12C_PRECALC = 1;
 				MATH_B_CTL.X1_MUNK_SEL = 2'b00;
 				MATH_B_CTL.X1_MUNK = 1;
@@ -1732,14 +1718,14 @@ module MADAM_SE
 				MATH_B_CTL.Y_T1_SEL = 2'b00;
 				MATH_B_CTL.Y_UPD = 1;
 			end
-			CRN_CALC: if (UNPACKER_B_READY && (CRNA_ST == CRN_CALC || !LRFORM)) begin
-				MATH_B_CTL.X1_MUNK_SEL = 2'd0;
+			CRN_CALC: if (UNPACKER_B_READY && (CRNA_ST == CRN_CALC || !LRFORM) && CE_R) begin
+				MATH_B_CTL.X1_MUNK_SEL = 2'd0;//MUNKEE_B_CTL.MX;
 				MATH_B_CTL.X1_MUNK = MUNKEE_B_LF_REQ;////////////////
 				MATH_B_CTL.X_ADD01_ASEL = 3'd0;
 				MATH_B_CTL.X_ADD01_BSEL = 3'd4;
 				MATH_B_CTL.X_ADD01_SUB = 0;
 				MATH_B_CTL.X1_UPD = 1;
-				MATH_B_CTL.X2_MUNK_SEL = 2'd2;
+				MATH_B_CTL.X2_MUNK_SEL = 2'd2;//MUNKEE_B_CTL.MX^2'b10;
 				MATH_B_CTL.X2_MUNK = 1;
 				MATH_B_CTL.X2_UPD = 1;
 				MATH_B_CTL.Y_T1_SEL = MATH_B_STAT.YTOP;
@@ -1750,12 +1736,12 @@ module MADAM_SE
 			end
 			CRN_REGIS: begin
 				if (REGIS_B_DONE) begin
-					MATH_B_CTL.A12C_CALC = 1;
+					if (CE_R) MATH_B_CTL.A12C_CALC = 1;
 				end else begin
-					MATH_B_CTL = REGIS_B_CTL;
+					/*if (CE_R)*/ MATH_B_CTL = REGIS_B_CTL;
 				end
 			end
-			CRN_REGIS_DONE: begin
+			CRN_REGIS_DONE: if (CE_R) begin
 				MATH_B_CTL.A12C_CALC = 1;
 			end
 			default:;
@@ -1932,15 +1918,15 @@ module MADAM_SE
 	wire CRN_ROW_INIT_SEL = (CRNB_ST == CRN_ROW_INIT0 || CRNB_ST == CRN_ROW_INIT1 || CRNB_ST == CRN_ROW_INIT2 || CRNB_ST == CRN_ROW_INIT3 || CRNB_ST == CRN_ROW_INIT4 ||
 	                         CRNB_ST == CRN_ROW_INIT5 || CRNB_ST == CRN_ROW_INIT6 || CRNB_ST == CRN_ROW_INIT7 || CRNB_ST == CRN_ROW_INIT8 || CRNB_ST == CRN_ROW_INIT9 || CRNB_ST == CRN_ROW_INIT10);
 	
-	wire [15: 0] REG_DIN = !REG_LOAD_A0 ? MDTI[31:16] : LOAD_BUF;//705
+	wire [15: 0] REG_DIN = !REG_LOAD_A0 ? MDTI[31:16] : LOAD_BUF;
 	bit  [15: 0] XA,YA;
 	bit  [15: 0] XS0,YS0;
 	wire [15: 0] REG_STACK_XIN = SCU_LOAD_D ? REG_DIN :
 	                             SCU_INIT ? XA :
-										  XS0;//706
+										  XS0;
 	wire [15: 0] REG_STACK_YIN = SCU_LOAD_D ? REG_DIN :
 	                             SCU_INIT ? YA :
-										  YS0;//707
+										  YS0;
 	bit  [31: 0] REG_DOUT;
 	MADAM_MATH_STACK MATH_REG_STACK 
 	(
@@ -2004,13 +1990,13 @@ module MADAM_SE
 			endcase
 			DBG_LDX_BIG <= $signed(DBG_LDX[31:16]) > 320 || $signed(DBG_LDX[31:16]) < -320;
 			DBG_LDY_BIG <= $signed(DBG_LDY[31:16]) > 240 || $signed(DBG_LDY[31:16]) < -240;
-			DBG_DX_BIG <= $signed(DBG_DX[31:16]) > 320 || $signed(DBG_DX[31:16]) < -320;
-			DBG_DY_BIG <= $signed(DBG_DY[31:16]) > 240 || $signed(DBG_DY[31:16]) < -240;
+			DBG_DX_BIG <= $signed(DBG_DX[31:20]) > 320 || $signed(DBG_DX[31:20]) < -320;
+			DBG_DY_BIG <= $signed(DBG_DY[31:20]) > 240 || $signed(DBG_DY[31:20]) < -240;
 		end
 	end 
 `endif
 	
-	bit  [15: 0] REG_XOUT_FF,REG_YOUT_FF;//708,709
+	bit  [15: 0] REG_XOUT_FF,REG_YOUT_FF;
 	always @(posedge CLK or negedge RST_N) begin
 		if (!RST_N) begin
 			REG_XOUT_FF <= '0;
@@ -2024,7 +2010,7 @@ module MADAM_SE
 	assign PM_DO = {~REG_XOUT_FF,~REG_YOUT_FF};
 	
 		
-	bit  [15: 0] MATH_A_XA,MATH_A_YA;//744,784
+	bit  [15: 0] MATH_A_XA,MATH_A_YA;
 	bit  [10: 0] MATH_A_Y;
 	bit  [11: 0] MATH_A_XL,MATH_A_XR;
 	MADAM_MATH_PLATFORM MATH_A 
@@ -2035,6 +2021,7 @@ module MADAM_SE
 		
 		.CE(CE_R),
 		
+		.LSC(SCOB_FLAG.ALSC & SCOBCTL.ASCALL),
 		.CLIPX(REGCTL1.CLIPX),
 		.CLIPY(REGCTL1.CLIPY),
 		
@@ -2052,7 +2039,7 @@ module MADAM_SE
 		.XRO(MATH_A_XR)
 	);
 	
-	bit  [15: 0] MATH_B_XA,MATH_B_YA;//744,784
+	bit  [15: 0] MATH_B_XA,MATH_B_YA;
 	bit  [10: 0] MATH_B_Y;
 	bit  [11: 0] MATH_B_XL,MATH_B_XR;
 	MADAM_MATH_PLATFORM MATH_B 
@@ -2063,6 +2050,7 @@ module MADAM_SE
 		
 		.CE(CE_R),
 		
+		.LSC(SCOB_FLAG.ALSC & SCOBCTL.ASCALL),
 		.CLIPX(REGCTL1.CLIPX),
 		.CLIPY(REGCTL1.CLIPY),
 		
@@ -2091,6 +2079,7 @@ module MADAM_SE
 	assign XY_B_REQ = LF_B_REQ&~IPN_B.T;
 	assign IPN_A_RMODE = IPN_A.RMODE;
 	assign IPN_B_RMODE = IPN_B.RMODE;
+	wire         IPN_RMODE = (XY_A_REQ & IPN_A_RMODE) | (XY_B_REQ & IPN_B_RMODE);
 	
 	YX_t         XY_A_LATCH,XY_B_LATCH;
 	bit          XY_A_REQ_LATCH,XY_B_REQ_LATCH;
@@ -2102,8 +2091,8 @@ module MADAM_SE
 		else if (EN && CE_R) begin
 			XY_A_LATCH <= XY_A;
 			XY_B_LATCH <= XY_B;
-			XY_A_REQ_LATCH <= XY_A_REQ;
-			XY_B_REQ_LATCH <= XY_B_REQ;
+			XY_A_REQ_LATCH <= XY_A_REQ&IPN_RMODE;
+			XY_B_REQ_LATCH <= XY_B_REQ&IPN_RMODE;
 		end
 	end 
 	
@@ -2114,14 +2103,14 @@ module MADAM_SE
 	bit          XY_FIFO_A_DRAW;
 	bit          XY_FIFO_CORNER;
 	bit          XY_FIFO_A_FULL,XY_FIFO_A_EMPTY;
-	assign XY_FIFO_A_WRREQ = (XY_A_REQ&IPN_A_RMODE) | (XY_B_REQ&IPN_B_RMODE) | XY_A_REQ_LATCH | XY_B_REQ_LATCH;
-	MADAM_SYNC_FIFO #(26) XY_FIFO_A //568
+	assign XY_FIFO_A_WRREQ = XY_A_REQ | XY_B_REQ | XY_A_REQ_LATCH | XY_B_REQ_LATCH;
+	MADAM_SYNC_FIFO #(26) XY_FIFO_A 
 	(
 		.CLK(CLK),
 		.EN(EN),
 		.RST(SPR_NEXT | ~RST_N),
 		
-		.DIN(XY_A_REQ_LATCH ? {1'b1,1'b0,LF_A_LAST,XY_A_LATCH} : {XY_A_REQ&IPN_A_RMODE,1'b1,1'b0,XY_A}),
+		.DIN(XY_A_REQ ? {1'b1,IPN_RMODE,LF_A_LAST&~IPN_RMODE,XY_A} : {XY_A_REQ_LATCH,1'b0,LF_A_LAST,XY_A_LATCH}),
 		.WRREQ(XY_FIFO_A_WRREQ & CE_R),
 		
 		.RDREQ(SYNC_FIFO_RDREQ & CE_F),
@@ -2136,13 +2125,13 @@ module MADAM_SE
 	bit          XY_FIFO_B_LAST;
 	bit          XY_FIFO_B_DOLO;
 	bit          XY_FIFO_B_DRAW;
-	MADAM_SYNC_FIFO #(26) XY_FIFO_B //568
+	MADAM_SYNC_FIFO #(26) XY_FIFO_B 
 	(
 		.CLK(CLK),
 		.EN(EN),
 		.RST(SPR_NEXT | ~RST_N),
 		
-		.DIN(XY_B_REQ_LATCH ? {1'b1,1'b0,LF_B_LAST,XY_B_LATCH} : {XY_B_REQ&IPN_B_RMODE,1'b1,1'b0,XY_B}),
+		.DIN(XY_B_REQ ? {1'b1,IPN_RMODE,LF_B_LAST&~IPN_RMODE,XY_B} : {XY_B_REQ_LATCH,1'b0,LF_B_LAST,XY_B_LATCH}),
 		.WRREQ(XY_FIFO_A_WRREQ & CE_R),
 		
 		.RDREQ(SYNC_FIFO_RDREQ & CE_F),
@@ -2232,7 +2221,7 @@ module MADAM_SE
 			
 			//step1
 			XY_FIFO_B_OUT_LATCH <= XY_FIFO_B_OUT;
-			{Y,X} = BUS_STATE_FF == CFB_INIT0 || BUS_STATE_FF == CFB_WRITE0 || BUS_STATE_FF == CFB_READ0 ? XY_FIFO_A_OUT : XY_FIFO_B_OUT_LATCH;
+			{Y,X} = BUS_STATE_FF == CFB_INIT1 || BUS_STATE_FF == CFB_WRITE1 || BUS_STATE_FF == CFB_READ1 ? XY_FIFO_B_OUT_LATCH : XY_FIFO_A_OUT;
 			if (G1[3])      YOFFS1 <= {1'b0,Y[10:1],10'b0000000000}; 
 			else if (G1[2]) YOFFS1 <= {3'b000,Y[10:1],8'b00000000};  
 			else if (G1[1]) YOFFS1 <= {2'b00,Y[10:1],9'b000000000};
@@ -2250,8 +2239,8 @@ module MADAM_SE
 			DRAW_B_FF2 <= DRAW_B_FF;
 			
 			//step2
-			if (DRAW_FF    && (BUS_STATE_FF == CFB_INIT1 || BUS_STATE_FF == CFB_WRITE1 || BUS_STATE_FF == CFB_READ1)) begin DST_ADDR_A <= ADDR_FF + {YOFFS1,1'b0} + {YOFFS2,1'b0}; end
-			if (DRAW_B_FF2 && (BUS_STATE_FF == CFB_INIT0 || BUS_STATE_FF == CFB_WRITE0 || BUS_STATE_FF == CFB_READ0)) begin DST_ADDR_B <= ADDR_FF + {YOFFS1,1'b0} + {YOFFS2,1'b0}; end
+			if (DRAW_FF    && (BUS_STATE == CFB_INIT0 || BUS_STATE_FF == CFB_INIT1 || BUS_STATE_FF == CFB_WRITE1 || BUS_STATE_FF == CFB_READ1)) begin DST_ADDR_A <= ADDR_FF + {YOFFS1,1'b0} + {YOFFS2,1'b0}; end
+			if (DRAW_B_FF2 && (                          BUS_STATE_FF == CFB_INIT0 || BUS_STATE_FF == CFB_WRITE0 || BUS_STATE_FF == CFB_READ0)) begin DST_ADDR_B <= ADDR_FF + {YOFFS1,1'b0} + {YOFFS2,1'b0}; end
 			DST_READ <= DOLO_CYCLE;
 			if (XY_FIFO_A_EMPTY && !DST_LAST_A) DST_LAST_A <= 1;
 			if (!DST_LAST_B && DST_LAST_A) DST_LAST_B <= 1;
@@ -2783,9 +2772,12 @@ module MADAM_UNPACKER (
 	output reg         EOL,
 	output reg [15: 0] OUT,
 	output reg         NEXT,
-	output             READY,
+	output             READY
 	
+`ifdef DEBUG
+	                   ,
 	output reg [10: 0] DBG_PIX_CNT
+`endif
 );
 
 	typedef enum bit [2:0] {
@@ -2864,7 +2856,9 @@ module MADAM_UNPACKER (
 						UP_ST <= UP_PRELOAD;
 					end
 					
+`ifdef DEBUG
 					DBG_PIX_CNT <= '0;
+`endif
 				end
 				
 				UP_PRELOAD: if (AVAIL) begin
@@ -2934,7 +2928,9 @@ module MADAM_UNPACKER (
 						UP_ST <= UP_DATA_REPEAT;
 					end
 					
+`ifdef DEBUG
 					DBG_PIX_CNT <= DBG_PIX_CNT + 1'd1;
+`endif
 				end
 				
 				UP_DATA_REPEAT: if (TAK || SKIP) begin
@@ -2947,7 +2943,9 @@ module MADAM_UNPACKER (
 						UP_ST <= UP_CTRL_READ;
 					end
 					
+`ifdef DEBUG
 					DBG_PIX_CNT <= DBG_PIX_CNT + 1'd1;
+`endif
 				end
 			endcase
 			
@@ -2970,7 +2968,7 @@ module MADAM_UNPACKER (
 				BIT_CNT <= BIT_CNT_NEXT[3:0];
 			end
 			
-			if (CODE_OUT && !SKIP) begin
+			if (CODE_OUT) begin
 				if (UP_ST == UP_CTRL_READ) begin
 					OUT <= '0;
 					T <= 1;
@@ -3143,6 +3141,7 @@ module MADAM_MATH_PLATFORM (
 	input             START,
 	
 	input MathCtl_t   CTL,
+	input             LSC,//Line super-clipping
 	input     [11: 0] CLIPX,
 	input     [10: 0] CLIPY,
 	
@@ -3155,12 +3154,16 @@ module MADAM_MATH_PLATFORM (
 	
 	output    [10: 0] YO,
 	output    [11: 0] XLO,
-	output    [11: 0] XRO,
+	output    [11: 0] XRO
 	
+`ifdef DEBUG
+	                   ,
 	output            DBG_Xa0_OVER,
 	output            DBG_Xa1_OVER,
 	output            DBG_Xa2_OVER,
-	output            DBG_Xa3_OVER
+	output            DBG_Xa3_OVER,
+	output            DBG_DY1_BIG,DBG_DY2_BIG
+`endif
 );
 
 	typedef enum bit [6:0] {
@@ -3173,6 +3176,7 @@ module MADAM_MATH_PLATFORM (
 	bit          LDX_Z,LDY_Z,LDX_N,LDY_N,LDX_ONE,LDY_ONE;
 	bit          DX_Z,DY_Z,DX_N,DY_N,DX_ONE,DY_ONE;
 	bit          DDX_Z,DDY_Z,DDX_N,DDY_N;
+	bit          DXa01_NMONE,DYa01_NMONE,DXa32_NMONE,DYa32_NMONE,DXa03_NMONE,DYa03_NMONE;
 	
 	
 	bit  [31: 0] Xa0,Xa1,Xa2,Xa3;//740-743
@@ -3307,18 +3311,21 @@ module MADAM_MATH_PLATFORM (
 	
 	wire MUNK_CW  = (DX_Z & LDY_Z &  ((DY_N & ~LDX_Z & ~LDX_N) | (~DY_Z & ~DY_N & LDX_N))) | (DY_Z & LDX_Z &  ((DX_N & ~LDY_Z & ~LDY_N) | (~DX_Z & ~DX_N & LDY_N)));
 	wire MUNK_CCW = (DX_Z & LDY_Z & ~((DY_N & ~LDX_Z & ~LDX_N) | (~DY_Z & ~DY_N & LDX_N))) | (DY_Z & LDX_Z & ~((DX_N & ~LDY_Z & ~LDY_N) | (~DX_Z & ~DX_N & LDY_N)));
-	wire MUNK_FUNC = DDX_Z & DDY_Z & ((DX_Z & LDY_Z & DY_ONE & LDX_ONE) | (DY_Z & LDX_Z & DX_ONE & LDY_ONE));
-	wire LINE_CLIP = (CX_N    & (DX_Z |  DX_N) & (DDX_Z |  DDX_N) & (LDX_Z |  LDX_N)) | (CY_N    & (DY_Z |  DY_N) & (DDY_Z |  DDY_N) & (LDY_Z |  LDY_N)) | 
-	                 (CX_CLIP & (DX_Z | ~DX_N) & (DDX_Z | ~DDX_N) & (LDX_Z | ~LDX_N)) | (CY_CLIP & (DY_Z | ~DY_N) & (DDY_Z | ~DDY_N) & (LDY_Z | ~LDY_N));
-	wire REGION_CLIP = (Xa0[31] & Xa1[31] & Xa2[31] & Xa3[31]) | (Ya0[31] & Ya1[31] & Ya2[31] & Ya3[31]);
+	wire MUNK_FUNC = DDX_Z & DDY_Z & ((DX_Z & DY_ONE & LDY_Z & LDX_ONE) | (DX_ONE & DY_Z & LDX_Z & LDY_ONE));
+	wire LINE_CLIP = (CX_N    & (DX_Z |  DX_N) & (DDX_Z |  DDX_N) & (LDX_Z |  LDX_N /*| LSC*/)) | (CY_N    & (DY_Z |  DY_N) & (DDY_Z |  DDY_N) & (LDY_Z |  LDY_N /*| LSC*/)) | 
+	                 (CX_CLIP & (DX_Z | ~DX_N) & (DDX_Z | ~DDX_N) & (LDX_Z | ~LDX_N /*| LSC*/)) | (CY_CLIP & (DY_Z | ~DY_N) & (DDY_Z | ~DDY_N) & (LDY_Z | ~LDY_N /*| LSC*/));
+	wire REGION_CLIP = (Xa0[31] & Xa1[31] & Xa2[31] & Xa3[31]) | (Ya0[31] & Ya1[31] & Ya2[31] & Ya3[31]) |
+	                   ((~Xa0[31] & Xa0[30:16] > {3'b000,CLIPX}) & (~Xa1[31] & Xa1[30:16] > {3'b000,CLIPX}) & (~Xa2[31] & Xa2[30:16] > {3'b000,CLIPX}) & (~Xa3[31] & Xa3[30:16] > {3'b000,CLIPX})) | 
+	                   (~MUNK_X1[15] & (MUNK_X1[14:0] > {3'b000,CLIPX}) & LSC) | 
+							 (~TEMP_Y_T1[15] & (TEMP_Y_T1[14:0] > {4'b0000,CLIPY}) & LSC);
 	
 	always @(posedge CLK) begin
 		bit  [15: 0] Xtemp,Ytemp;
 		
-		if (RST && CE) begin
-//			DS <= DRAW_IDLE;
+		if (RST) begin
+			
 		end
-		else if (EN && CE) begin
+		else if (EN /*&& CE*/) begin
 			if (CTL.A0CH_INIT || CTL.A3CH_INIT || CTL.A0DH_INIT || CTL.A3DH_INIT) begin
 				Xtemp <= XS0;
 				Ytemp <= YS0;
@@ -3334,6 +3341,8 @@ module MADAM_MATH_PLATFORM (
 				Ya3 <= Ya0 + {Ytemp,YS0};
 				LDX_Z <= ~|{Xtemp,XS0}; LDX_N <= Xtemp[15]; LDX_ONE <= (Xtemp == 16'h0001 | Xtemp == 16'hFFFF) & ~|XS0;
 				LDY_Z <= ~|{Ytemp,YS0}; LDY_N <= Ytemp[15]; LDY_ONE <= (Ytemp == 16'h0001 | Ytemp == 16'hFFFF) & ~|YS0;
+				DXa03_NMONE <= ({Xtemp,XS0} <= 32'h00010000 | {Xtemp,XS0} >= 32'hFFFF0000);
+				DYa03_NMONE <= ({Ytemp,YS0} <= 32'h00010000 | {Ytemp,YS0} >= 32'hFFFF0000);
 			end
 			if (CTL.A0DL_INIT) begin	//DX->DXa0,DY->DYa0
 				DXa0 <= {Xtemp,XS0};
@@ -3355,6 +3364,11 @@ module MADAM_MATH_PLATFORM (
 				Ya2 <= Ya3 + {{4{DYa3[31]}},DYa3[31:4]};
 				{DX1,DX1F} <= Xa3 - Xa0;
 				{DY1,DY1F} <= Ya3 - Ya0;
+				
+				DXa01_NMONE <= (DXa0 <= 32'h00100000 | DXa0 >= 32'hFFF00000);
+				DYa01_NMONE <= (DYa0 <= 32'h00100000 | DYa0 >= 32'hFFF00000);
+				DXa32_NMONE <= (DXa3 <= 32'h00100000 | DXa3 >= 32'hFFF00000);
+				DYa32_NMONE <= (DYa3 <= 32'h00100000 | DYa3 >= 32'hFFF00000);
 			end
 			if (CTL.A12C_CALC) begin	//
 				Xa0 <= Xa1;
@@ -3367,6 +3381,7 @@ module MADAM_MATH_PLATFORM (
 				Ya2 <= Ya2 + {{4{DYa3[31]}},DYa3[31:4]};
 				{DX1,DX1F} <= Xa2 - Xa1;
 				{DY1,DY1F} <= Ya2 - Ya1;
+				
 			end
 			
 			if (CTL.X1_UPD) begin
@@ -3443,10 +3458,14 @@ module MADAM_MATH_PLATFORM (
 	assign XLO = X1[11:0];
 	assign XRO = X2[11:0];
 	
+`ifdef DEBUG
 	assign DBG_Xa0_OVER = (Xa0[31:26] != 6'b000000 && Xa0[31:26] != 6'b111111);
 	assign DBG_Xa1_OVER = (Xa1[31:26] != 6'b000000 && Xa1[31:26] != 6'b111111);
 	assign DBG_Xa2_OVER = (Xa2[31:26] != 6'b000000 && Xa2[31:26] != 6'b111111);
 	assign DBG_Xa3_OVER = (Xa3[31:26] != 6'b000000 && Xa3[31:26] != 6'b111111);
+	assign DBG_DY1_BIG = $signed(DY1) >= 150 || $signed(DY1) < -150;
+	assign DBG_DY2_BIG = $signed(DY2) >= 150 || $signed(DY2) < -150;
+`endif
 						  
 endmodule
 
@@ -3494,7 +3513,7 @@ module MADAM_REGIS (
 			// synopsys translate_off
 			// synopsys translate_on
 		end
-		else if (EN && CE) begin
+		else if (EN /*&& CE*/) begin
 			BW1_NEXT_CONER = 0;
 			BW2_NEXT_CONER = 0;
 			if (START) begin
@@ -3512,7 +3531,7 @@ module MADAM_REGIS (
 			else if (RUN) begin
 				if (!PAUSE) begin
 				case (BW1)
-					R: begin
+					R: if (CE) begin
 						if (STAT.COMPT1) begin
 							if (CS >= 2'd2) begin
 								BW1 <= R;
@@ -3539,10 +3558,10 @@ module MADAM_REGIS (
 							BW1 <= W;
 						end
 					end
-					E: begin
+					E: if (CE) begin
 						BW1 <= STAT.YADD01N ? W : E;
 					end
-					W: if (!COMMON_WAIT) begin
+					W: if (CE) if (!COMMON_WAIT) begin
 						BW1_PREV_S <= 0;
 						BW1 <= R;
 					end
@@ -3553,7 +3572,7 @@ module MADAM_REGIS (
 				end
 
 				case (BW2)
-					R: begin
+					R: if (CE) begin
 						if (STAT.COMPT2) begin
 							if (CS >= 2'd2)  begin
 								BW2 <= R;
@@ -3580,10 +3599,10 @@ module MADAM_REGIS (
 							BW2 <= W;
 						end
 					end
-					E: begin
+					E: if (CE) begin
 						BW2 <= STAT.YADD23N ? W : E;
 					end
-					W: if (!COMMON_WAIT) begin
+					W: if (CE) if (!COMMON_WAIT) begin
 						BW2_PREV_S <= 0;
 						BW2 <= R;
 					end
@@ -3596,7 +3615,7 @@ module MADAM_REGIS (
 				
 				
 				case (BW1)
-					R: begin
+					R: if (CE) begin
 						if (STAT.COMPT1) begin
 							if (CS >= 2'd2) begin
 								RUN <= 0;
@@ -3613,7 +3632,7 @@ module MADAM_REGIS (
 				endcase
 				
 				case (BW2)
-					R: begin
+					R: if (CE) begin
 						if (STAT.COMPT2) begin
 							if (CS >= 2'd2) begin
 								RUN <= 0;
@@ -3637,7 +3656,7 @@ module MADAM_REGIS (
 	always_comb begin	
 		CTL = '0;
 		case (BW1)
-			R: begin
+			R: if (CE) begin
 				CTL.Y_ADD01_ASEL = 3'd4;//X1F
 				CTL.Y_ADD01_BSEL = 3'd4;//DX1
 				CTL.Y_ADD01_SUB = STAT.DX1N;//X1SLOP;
@@ -3656,7 +3675,7 @@ module MADAM_REGIS (
 				CTL.X1F_UPD = 1;
 				CTL.Y_T1_SEL = T1;//Ya(T1)
 			end
-			E: begin
+			E: if (CE) begin
 				CTL.Y_ADD01_ASEL = 3'd4;//X1F
 				CTL.Y_ADD01_BSEL = 3'd5;//DY1
 				CTL.Y_ADD01_SUB = 1;
@@ -3666,7 +3685,7 @@ module MADAM_REGIS (
 				CTL.X_ADD01_SUB = STAT.DX1N;//X1SLOP;
 				CTL.X1_UPD = 1;
 			end
-			W: if (!COMMON_WAIT) begin
+			W: if (CE) if (!COMMON_WAIT) begin
 				CTL.Y_INC = 1;
 				CTL.X_ADD01_ASEL = {1'b0,T1};//Xa(T1)
 				CTL.X_ADD01_BSEL = {1'b0,F1};//Xa(F1)
@@ -3681,7 +3700,7 @@ module MADAM_REGIS (
 		endcase
 		
 		case (BW2)
-			R: begin
+			R: if (CE) begin
 				CTL.Y_ADD23_ASEL = 3'd4;//X2F
 				CTL.Y_ADD23_BSEL = 3'd4;//DX2
 				CTL.Y_ADD23_SUB = STAT.DX2N;//X2SLOP;
@@ -3700,7 +3719,7 @@ module MADAM_REGIS (
 				CTL.X2F_UPD = 1;
 				CTL.T2_SEL = T2;//Ya(T2)
 			end
-			E: begin
+			E: if (CE) begin
 				CTL.Y_ADD23_ASEL = 3'd4;//X2F
 				CTL.Y_ADD23_BSEL = 3'd5;//DY2
 				CTL.Y_ADD23_SUB = 1;
@@ -3710,7 +3729,7 @@ module MADAM_REGIS (
 				CTL.X_ADD23_SUB = STAT.DX2N;//X2SLOP;
 				CTL.X2_UPD = 1;
 			end
-			W: if (!COMMON_WAIT) begin
+			W: if (CE) if (!COMMON_WAIT) begin
 				//DX2=Xa(T2)-Xa(F2)
 				CTL.X_ADD23_ASEL = {1'b0,T2};//Xa(T2)
 				CTL.X_ADD23_BSEL = {1'b0,F2};//Xa(F2)
